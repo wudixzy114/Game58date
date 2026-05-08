@@ -1,0 +1,11 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 16
+VisualStudioVersion = 16.0.0.0
+MinimumVisualStudioVersion = 16.0.0.0
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game58date.Windows", "Game58date.Windows\Game58date.Windows.csproj", "{AA273BC9-CEA2-40BE-B7FB-8B631F0B39AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game58date", "Game58date\Game58date.csproj", "{64A07DE6-D20C-4275-9AA1-0CEE15FFA271}"
+EndProject
+Global
+EndGlobal
