@@ -4,11 +4,13 @@ public sealed class TerrainChunkGenerator
 {
     private readonly TerrainGenerationSettings settings;
     private readonly WorldFieldSampler sampler;
+    private readonly SurfaceMaterialResolver surfaceMaterialResolver;
 
     public TerrainChunkGenerator(TerrainGenerationSettings settings)
     {
         this.settings = settings;
         sampler = new WorldFieldSampler(settings);
+        surfaceMaterialResolver = new SurfaceMaterialResolver(settings);
     }
 
     public VoxelChunkData Generate(VoxelChunkCoordinate coordinate)
@@ -70,26 +72,30 @@ public sealed class TerrainChunkGenerator
                 : BlockKind.Stone;
         }
 
-        if (worldY <= sample.WaterLevel + 1 || sample.ShoreWeight > 0.48f)
+        SurfaceMaterialKind materialKind = surfaceMaterialResolver.Resolve(sample, worldY, openAbove);
+        switch (materialKind)
         {
-            return BlockKind.Sand;
-        }
+            case SurfaceMaterialKind.Shore:
+                return BlockKind.Sand;
 
-        if (sample.MountainWeight > 0.42f || sample.Slope > settings.SteepSlopeThreshold)
-        {
-            return depthFromSurface <= 2 ? BlockKind.Stone : BlockKind.Dirt;
-        }
+            case SurfaceMaterialKind.Cliff:
+                return depthFromSurface <= 2 ? BlockKind.Stone : BlockKind.Dirt;
 
-        if (openAbove)
-        {
-            return BlockKind.Grass;
-        }
+            case SurfaceMaterialKind.HighGrass:
+                return openAbove ? BlockKind.Grass : BlockKind.Dirt;
 
-        if (depthFromSurface <= 4)
-        {
-            return BlockKind.Dirt;
-        }
+            default:
+                if (openAbove)
+                {
+                    return BlockKind.Grass;
+                }
 
-        return BlockKind.Stone;
+                if (depthFromSurface <= 4)
+                {
+                    return BlockKind.Dirt;
+                }
+
+                return BlockKind.Stone;
+        }
     }
 }

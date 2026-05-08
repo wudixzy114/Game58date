@@ -82,6 +82,7 @@ public sealed class VoxelTerrainWorldRuntime
         {
             if (!desiredChunks.Contains(result.Coordinate))
             {
+                TerrainRuntimeLogger.Logger.Debug($"Ignored built chunk outside current view {result.Coordinate} rev={result.Revision}.");
                 continue;
             }
 
@@ -96,7 +97,9 @@ public sealed class VoxelTerrainWorldRuntime
 
     private void RequestChunkBuild(VoxelChunkCoordinate coordinate)
     {
-        buildPipeline.Enqueue(coordinate, nextRevision++);
+        int revision = nextRevision++;
+        TerrainRuntimeLogger.Logger.Debug($"Requesting chunk build {coordinate} rev={revision}.");
+        buildPipeline.Enqueue(coordinate, revision);
     }
 
     private void RemoveActiveChunk(VoxelChunkCoordinate coordinate)
@@ -105,6 +108,7 @@ public sealed class VoxelTerrainWorldRuntime
         {
             Stats.VisibleFaceCount -= existing.MeshData.FaceCount;
             existing.Entity.Scene = null;
+            TerrainRuntimeLogger.Logger.Debug($"Removed active chunk {coordinate}.");
         }
     }
 
@@ -126,5 +130,6 @@ public sealed class VoxelTerrainWorldRuntime
         scene.Entities.Add(entity);
         chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, entity);
         Stats.VisibleFaceCount += result.MeshData.FaceCount;
+        TerrainRuntimeLogger.Logger.Debug($"Integrated chunk {result.Coordinate} rev={result.Revision}.");
     }
 }

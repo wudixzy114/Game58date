@@ -53,6 +53,7 @@ public sealed class VoxelChunkBuildPipeline
 
         queuedRequests.Enqueue(new ChunkBuildRequest(coordinate, revision));
         queuedRevisions[coordinate] = revision;
+        TerrainRuntimeLogger.Logger.Debug($"Queued chunk build {coordinate} rev={revision}.");
     }
 
     public void Pump()
@@ -66,9 +67,11 @@ public sealed class VoxelChunkBuildPipeline
 
             if (!latestRequestedRevision.TryGetValue(request.Coordinate, out int latestRevision) || latestRevision != request.Revision)
             {
+                TerrainRuntimeLogger.Logger.Debug($"Skipped stale queued request {request.Coordinate} rev={request.Revision} latest={latestRevision}.");
                 continue;
             }
 
+            TerrainRuntimeLogger.Logger.Debug($"Starting chunk build {request.Coordinate} rev={request.Revision}.");
             runningBuilds[request.Coordinate] = Task.Run(() => BuildChunk(request));
         }
     }
@@ -109,15 +112,18 @@ public sealed class VoxelChunkBuildPipeline
                 ChunkBuildResult result = task.GetAwaiter().GetResult();
                 if (!latestRequestedRevision.TryGetValue(result.Coordinate, out int latestRevision) || latestRevision != result.Revision)
                 {
+                    TerrainRuntimeLogger.Logger.Debug($"Discarded stale build result {result.Coordinate} rev={result.Revision} latest={latestRevision}.");
                     continue;
                 }
 
                 readyResults.Enqueue(result);
                 readyRevisions[result.Coordinate] = result.Revision;
+                TerrainRuntimeLogger.Logger.Debug($"Chunk build completed {result.Coordinate} rev={result.Revision}, faces={result.MeshData.FaceCount}.");
             }
             catch (Exception exception)
             {
                 LastErrorMessage = exception.GetBaseException().Message;
+                TerrainRuntimeLogger.Logger.Error($"Chunk build failed for {coordinate}.", exception);
             }
         }
     }

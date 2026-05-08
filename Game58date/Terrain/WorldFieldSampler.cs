@@ -43,12 +43,14 @@ public sealed class WorldFieldSampler
         int soilDepth = 4 + (int)MathF.Round(moisture * 2f);
         int stoneHeight = Math.Max(1, surfaceHeight - soilDepth);
         float slope = EstimateSlope(worldX, worldZ);
+        BiomeWeights weights = BuildBiomeWeights(shoreWeight, hillWeight, mountainWeight);
 
         return new WorldSample(
             surfaceHeight,
             stoneHeight,
             settings.WaterLevel,
-            ResolveBiome(shoreWeight, mountainWeight, ridge),
+            ResolveBiome(weights, ridge),
+            weights,
             moisture,
             temperature,
             continentalness,
@@ -132,19 +134,39 @@ public sealed class WorldFieldSampler
         return Saturate((dx + dz) / 6f);
     }
 
-    private static BiomeKind ResolveBiome(float shoreWeight, float mountainWeight, float ridge)
+    private static BiomeWeights BuildBiomeWeights(float shoreWeight, float hillWeight, float mountainWeight)
     {
-        if (shoreWeight > 0.55f)
+        float mountains = Saturate(mountainWeight);
+        float shore = Saturate(shoreWeight * (1f - mountains * 0.7f));
+        float hills = Saturate(hillWeight * (1f - shore * 0.45f));
+        float plains = Saturate(1f - shore - hills - mountains);
+
+        float total = shore + plains + hills + mountains;
+        if (total <= 0f)
+        {
+            return new BiomeWeights(0f, 1f, 0f, 0f);
+        }
+
+        return new BiomeWeights(
+            shore / total,
+            plains / total,
+            hills / total,
+            mountains / total);
+    }
+
+    private static BiomeKind ResolveBiome(BiomeWeights weights, float ridge)
+    {
+        if (weights.Shore >= weights.Plains && weights.Shore >= weights.Hills && weights.Shore >= weights.Mountains)
         {
             return BiomeKind.Shore;
         }
 
-        if (mountainWeight > 0.48f && ridge > 0.55f)
+        if (weights.Mountains >= weights.Hills && weights.Mountains >= weights.Plains && ridge > 0.50f)
         {
             return BiomeKind.Mountains;
         }
 
-        if (ridge > 0.44f)
+        if (weights.Hills >= weights.Plains)
         {
             return BiomeKind.Hills;
         }
