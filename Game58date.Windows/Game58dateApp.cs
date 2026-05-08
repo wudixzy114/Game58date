@@ -1,5 +1,6 @@
+using Game58date;
 using Stride.Engine;
 
-using var game = new Game();
+using var game = new PrototypeRuntimeGame();
 game.Run();
 
