@@ -25,8 +25,7 @@ public sealed class VoxelChunkMesher
 
         for (int axis = 0; axis < 3; axis++)
         {
-            int u = (axis + 1) % 3;
-            int v = (axis + 2) % 3;
+            GetAxisFrame(axis, out int u, out int v);
             int duLimit = dims[u];
             int dvLimit = dims[v];
 
@@ -55,8 +54,8 @@ public sealed class VoxelChunkMesher
         int duLimit,
         int dvLimit)
     {
-        int u = (axis + 1) % 3;
-        int v = (axis + 2) % 3;
+        GetAxisFrame(axis, out int u, out int v);
+
         int index = 0;
 
         for (int dv = 0; dv < dvLimit; dv++)
@@ -82,8 +81,8 @@ public sealed class VoxelChunkMesher
                 mask[index++] = nearSolid == farSolid
                     ? FaceMaskCell.Empty
                     : nearSolid
-                        ? new FaceMaskCell(nearBlock, -1)
-                        : new FaceMaskCell(farBlock, 1);
+                        ? new FaceMaskCell(nearBlock, 1)
+                        : new FaceMaskCell(farBlock, -1);
             }
         }
     }
@@ -164,43 +163,62 @@ public sealed class VoxelChunkMesher
         float scale,
         ref Vector3 max)
     {
-        int u = (axis + 1) % 3;
-        int v = (axis + 2) % 3;
-        int plane = cell.NormalSign > 0 ? slice + 1 : slice + 1;
+        int plane = slice + 1;
+        Vector3 basePosition;
+        Vector3 duVector;
+        Vector3 dvVector;
+        Vector3 normal;
 
-        Vector3 basePosition = Vector3.Zero;
-        basePosition[axis] = plane * scale;
-        basePosition[u] = du * scale;
-        basePosition[v] = dv * scale;
+        switch (axis)
+        {
+            case 0 when cell.NormalSign > 0:
+                basePosition = new Vector3(plane * scale, du * scale, dv * scale);
+                duVector = new Vector3(0f, width * scale, 0f);
+                dvVector = new Vector3(0f, 0f, height * scale);
+                normal = Vector3.UnitX;
+                break;
 
-        Vector3 duVector = Vector3.Zero;
-        duVector[u] = width * scale;
-        Vector3 dvVector = Vector3.Zero;
-        dvVector[v] = height * scale;
+            case 0:
+                basePosition = new Vector3(plane * scale, du * scale, (dv + height) * scale);
+                duVector = new Vector3(0f, width * scale, 0f);
+                dvVector = new Vector3(0f, 0f, -height * scale);
+                normal = -Vector3.UnitX;
+                break;
 
-        Vector3 normal = Vector3.Zero;
-        normal[axis] = cell.NormalSign;
+            case 1 when cell.NormalSign > 0:
+                basePosition = new Vector3(du * scale, plane * scale, (dv + height) * scale);
+                duVector = new Vector3(width * scale, 0f, 0f);
+                dvVector = new Vector3(0f, 0f, -height * scale);
+                normal = Vector3.UnitY;
+                break;
+
+            case 1:
+                basePosition = new Vector3(du * scale, plane * scale, dv * scale);
+                duVector = new Vector3(width * scale, 0f, 0f);
+                dvVector = new Vector3(0f, 0f, height * scale);
+                normal = -Vector3.UnitY;
+                break;
+
+            case 2 when cell.NormalSign > 0:
+                basePosition = new Vector3((dv + height) * scale, du * scale, plane * scale);
+                duVector = new Vector3(0f, width * scale, 0f);
+                dvVector = new Vector3(-height * scale, 0f, 0f);
+                normal = Vector3.UnitZ;
+                break;
+
+            default:
+                basePosition = new Vector3(dv * scale, du * scale, plane * scale);
+                duVector = new Vector3(0f, width * scale, 0f);
+                dvVector = new Vector3(height * scale, 0f, 0f);
+                normal = -Vector3.UnitZ;
+                break;
+        }
 
         int baseVertex = mesh.Vertices.Count;
-        Vector3 p0;
-        Vector3 p1;
-        Vector3 p2;
-        Vector3 p3;
-
-        if (cell.NormalSign > 0)
-        {
-            p0 = basePosition;
-            p1 = basePosition + dvVector;
-            p2 = basePosition + duVector + dvVector;
-            p3 = basePosition + duVector;
-        }
-        else
-        {
-            p0 = basePosition;
-            p1 = basePosition + duVector;
-            p2 = basePosition + duVector + dvVector;
-            p3 = basePosition + dvVector;
-        }
+        Vector3 p0 = basePosition;
+        Vector3 p1 = basePosition + duVector;
+        Vector3 p2 = basePosition + duVector + dvVector;
+        Vector3 p3 = basePosition + dvVector;
 
         mesh.Vertices.Add(new VertexPositionNormalTexture(p0, normal, GetUv(cell.Block, 0, width, height)));
         mesh.Vertices.Add(new VertexPositionNormalTexture(p1, normal, GetUv(cell.Block, 1, width, height)));
@@ -208,11 +226,11 @@ public sealed class VoxelChunkMesher
         mesh.Vertices.Add(new VertexPositionNormalTexture(p3, normal, GetUv(cell.Block, 3, width, height)));
 
         mesh.Indices.Add(baseVertex + 0);
+        mesh.Indices.Add(baseVertex + 2);
         mesh.Indices.Add(baseVertex + 1);
-        mesh.Indices.Add(baseVertex + 2);
         mesh.Indices.Add(baseVertex + 0);
-        mesh.Indices.Add(baseVertex + 2);
         mesh.Indices.Add(baseVertex + 3);
+        mesh.Indices.Add(baseVertex + 2);
 
         max = Vector3.Max(max, p0);
         max = Vector3.Max(max, p1);
@@ -255,6 +273,27 @@ public sealed class VoxelChunkMesher
     private static BlockKind GetBlock(VoxelChunkData chunk, int x, int y, int z)
     {
         return chunk.GetBlock(x, y, z);
+    }
+
+    private static void GetAxisFrame(int axis, out int u, out int v)
+    {
+        switch (axis)
+        {
+            case 0:
+                u = 1;
+                v = 2;
+                return;
+
+            case 1:
+                u = 0;
+                v = 2;
+                return;
+
+            default:
+                u = 1;
+                v = 0;
+                return;
+        }
     }
 
     private readonly record struct FaceMaskCell(BlockKind Block, int NormalSign)

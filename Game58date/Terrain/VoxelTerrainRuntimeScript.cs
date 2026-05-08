@@ -33,6 +33,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         worldRuntime = new VoxelTerrainWorldRuntime(settings, generator, mesher, modelFactory);
 
         cameraEntity = sceneBootstrapper.EnsureCamera(scene);
+        sceneBootstrapper.EnsureTerrainLighting(scene);
         sceneBootstrapper.DisableLegacyEntities(scene);
         worldRuntime.RefreshVisibleChunks(scene, cameraEntity.Transform.Position, force: true);
     }

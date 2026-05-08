@@ -1,6 +1,7 @@
 #nullable enable
 using Stride.Core.Mathematics;
 using Stride.Engine;
+using Stride.Rendering.Lights;
 
 namespace Game58date.Terrain;
 
@@ -28,6 +29,47 @@ public sealed class TerrainSceneBootstrapper
 
         scene.Entities.Add(cameraEntity);
         return cameraEntity;
+    }
+
+    public void EnsureTerrainLighting(Scene scene)
+    {
+        Entity? lightEntity = null;
+        foreach (Entity entity in scene.Entities)
+        {
+            if (entity.Name == "Directional light")
+            {
+                lightEntity = entity;
+                break;
+            }
+        }
+
+        if (lightEntity is null)
+        {
+            lightEntity = new Entity("Directional light");
+            lightEntity.Add(new LightComponent
+            {
+                Type = new LightDirectional(),
+                Intensity = 14f,
+            });
+            scene.Entities.Add(lightEntity);
+        }
+
+        LightComponent? lightComponent = lightEntity.Get<LightComponent>();
+        if (lightComponent is null)
+        {
+            lightComponent = new LightComponent
+            {
+                Type = new LightDirectional(),
+                Intensity = 14f,
+            };
+            lightEntity.Add(lightComponent);
+        }
+
+        lightComponent.Intensity = 14f;
+        lightComponent.SetColor(new Color3(1.0f, 0.98f, 0.94f));
+
+        Vector3 desiredLightDirection = Vector3.Normalize(new Vector3(-0.35f, -1.0f, -0.25f));
+        lightEntity.Transform.Rotation = Quaternion.BetweenDirections(-Vector3.UnitZ, desiredLightDirection);
     }
 
     public void DisableLegacyEntities(Scene scene)
