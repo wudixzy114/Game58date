@@ -19,4 +19,10 @@ public sealed class TerrainGenerationSettings
     public float MountainAmplitude { get; init; } = 26f;
 
     public int WaterLevel { get; init; } = 20;
+
+    public float CaveThreshold { get; init; } = 0.34f;
+
+    public int MaxConcurrentChunkBuilds { get; init; } = 2;
+
+    public int MaxChunkUploadsPerFrame { get; init; } = 2;
 }
