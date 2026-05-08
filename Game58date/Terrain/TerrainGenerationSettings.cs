@@ -20,7 +20,17 @@ public sealed class TerrainGenerationSettings
 
     public int WaterLevel { get; init; } = 20;
 
-    public float CaveThreshold { get; init; } = 0.34f;
+    public float DomainWarpFrequency { get; init; } = 0.0024f;
+
+    public float DomainWarpAmplitude { get; init; } = 18f;
+
+    public float OverhangStrength { get; init; } = 7.5f;
+
+    public float SurfaceBandHeight { get; init; } = 14f;
+
+    public float SteepSlopeThreshold { get; init; } = 0.42f;
+
+    public float CaveThreshold { get; init; } = 0.40f;
 
     public int MaxConcurrentChunkBuilds { get; init; } = 2;
 

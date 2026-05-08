@@ -10,18 +10,17 @@ namespace Game58date.Terrain;
 public sealed class VoxelChunkModelFactory
 {
     private readonly GraphicsDevice graphicsDevice;
-    private readonly IContentManager content;
-    private Material? material;
+    private readonly TerrainMaterialFactory materialFactory;
 
     public VoxelChunkModelFactory(GraphicsDevice graphicsDevice, IContentManager content)
     {
         this.graphicsDevice = graphicsDevice;
-        this.content = content;
+        materialFactory = new TerrainMaterialFactory(graphicsDevice);
     }
 
     public Model CreateModel(VoxelChunkMeshData meshData)
     {
-        material ??= content.Load<Material>("Sphere Material");
+        Material material = materialFactory.GetOrCreate();
 
         var vertexBuffer = Buffer.New(graphicsDevice, meshData.Vertices.ToArray(), BufferFlags.VertexBuffer, GraphicsResourceUsage.Immutable);
         var indexBuffer = Buffer.New(graphicsDevice, meshData.Indices.ToArray(), BufferFlags.IndexBuffer, GraphicsResourceUsage.Immutable);

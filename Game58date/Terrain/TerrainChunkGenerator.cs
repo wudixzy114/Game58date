@@ -1,5 +1,3 @@
-using Game58date.Terrain.Noise;
-
 namespace Game58date.Terrain;
 
 public sealed class TerrainChunkGenerator
@@ -49,26 +47,47 @@ public sealed class TerrainChunkGenerator
             return BlockKind.Bedrock;
         }
 
-        if (worldY > sample.SurfaceHeight)
+        bool solid = sampler.SampleTerrainDensity(worldX, worldY, worldZ, sample) > 0f;
+        if (!solid)
         {
             return worldY <= sample.WaterLevel ? BlockKind.Water : BlockKind.Air;
         }
 
-        float caveDensity = sampler.SampleCaveDensity(worldX, worldY, worldZ);
-        bool caveCarved = worldY < sample.SurfaceHeight - 4 && caveDensity > settings.CaveThreshold;
-        if (caveCarved)
+        bool openAbove = sampler.SampleTerrainDensity(worldX, worldY + 1, worldZ, sample) <= 0f;
+        bool openSide =
+            sampler.SampleTerrainDensity(worldX + 1, worldY, worldZ, sample) <= 0f ||
+            sampler.SampleTerrainDensity(worldX - 1, worldY, worldZ, sample) <= 0f ||
+            sampler.SampleTerrainDensity(worldX, worldY, worldZ + 1, sample) <= 0f ||
+            sampler.SampleTerrainDensity(worldX, worldY, worldZ - 1, sample) <= 0f;
+
+        bool exposed = openAbove || openSide;
+        int depthFromSurface = sample.SurfaceHeight - worldY;
+
+        if (!exposed)
         {
-            return worldY <= sample.WaterLevel ? BlockKind.Water : BlockKind.Air;
+            return worldY > sample.StoneHeight
+                ? sample.Biome == BiomeKind.Shore ? BlockKind.Sand : BlockKind.Dirt
+                : BlockKind.Stone;
         }
 
-        if (worldY == sample.SurfaceHeight)
+        if (worldY <= sample.WaterLevel + 1 || sample.ShoreWeight > 0.48f)
         {
-            return sample.Biome == BiomeKind.Shore ? BlockKind.Sand : BlockKind.Grass;
+            return BlockKind.Sand;
         }
 
-        if (worldY > sample.StoneHeight)
+        if (sample.MountainWeight > 0.42f || sample.Slope > settings.SteepSlopeThreshold)
         {
-            return sample.Biome == BiomeKind.Shore ? BlockKind.Sand : BlockKind.Dirt;
+            return depthFromSurface <= 2 ? BlockKind.Stone : BlockKind.Dirt;
+        }
+
+        if (openAbove)
+        {
+            return BlockKind.Grass;
+        }
+
+        if (depthFromSurface <= 4)
+        {
+            return BlockKind.Dirt;
         }
 
         return BlockKind.Stone;
