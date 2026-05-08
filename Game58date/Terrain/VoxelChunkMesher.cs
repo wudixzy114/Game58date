@@ -17,10 +17,7 @@ public sealed class VoxelChunkMesher
     {
         var mesh = new VoxelChunkMeshData();
         float scale = settings.VoxelScale;
-        Vector3 min = new(
-            chunk.Coordinate.X * chunk.Size * scale,
-            0f,
-            chunk.Coordinate.Z * chunk.Size * scale);
+        Vector3 min = Vector3.Zero;
         Vector3 max = min;
 
         int[] dims = { chunk.Size, chunk.Height, chunk.Size };

@@ -113,6 +113,11 @@ public sealed class VoxelTerrainWorldRuntime
         RemoveActiveChunk(result.Coordinate);
 
         var entity = new Entity($"Chunk_{result.Coordinate.X}_{result.Coordinate.Z}");
+        entity.Transform.Position = new Vector3(
+            result.Coordinate.X * settings.ChunkSize * settings.VoxelScale,
+            0f,
+            result.Coordinate.Z * settings.ChunkSize * settings.VoxelScale);
+
         if (!result.MeshData.IsEmpty)
         {
             entity.Add(new ModelComponent(modelFactory.CreateModel(result.MeshData)));

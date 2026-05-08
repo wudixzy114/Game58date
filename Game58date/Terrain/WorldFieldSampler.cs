@@ -78,8 +78,11 @@ public sealed class WorldFieldSampler
         float overhangContribution = overhang * sample.MountainWeight * surfaceBand * settings.OverhangStrength;
         float cliffContribution = overhangB * sample.HillWeight * sample.Slope * surfaceBand * (settings.OverhangStrength * 0.45f);
 
+        float caveDepthAllowance = Saturate((sample.SurfaceHeight - settings.MinimumSurfaceThickness - worldY) / settings.CaveCeilingFadeDepth);
         float cave = SampleCaveDensity(worldX, worldY, worldZ);
-        float caveCarving = MathF.Max(0f, cave - settings.CaveThreshold) * 18f;
+        float caveCarving = caveDepthAllowance > 0f
+            ? MathF.Max(0f, cave - settings.CaveThreshold) * settings.CaveCarvingStrength * caveDepthAllowance
+            : 0f;
 
         return density + overhangContribution + cliffContribution - caveCarving;
     }
@@ -112,10 +115,10 @@ public sealed class WorldFieldSampler
         float baseLand = settings.BaseHeight + continentalness * settings.HeightAmplitude;
         float erosionCut = erosion * 5.5f;
         float coastFlatten = shoreWeight * 5.0f;
-        float rollingHills = ridge * hillWeight * 7.5f;
+        float rollingHills = ridge * hillWeight * 5.0f;
         float mountainHeight = ridge * ridge * settings.MountainAmplitude * mountainWeight;
-        float terrace = ApplyTerracing(baseLand + mountainHeight + rollingHills - erosionCut - coastFlatten, 2.0f, 0.28f);
-        float detail = ridge * plainWeight * 1.5f;
+        float terrace = ApplyTerracing(baseLand + mountainHeight + rollingHills - erosionCut - coastFlatten, 2.0f, 0.40f);
+        float detail = ridge * plainWeight * 0.9f;
         return terrace + detail;
     }
 
