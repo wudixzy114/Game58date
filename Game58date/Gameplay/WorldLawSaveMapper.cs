@@ -10,7 +10,8 @@ public static class WorldLawSaveMapper
 {
     public static WorldLawRuntimeState BuildRuntimeState(GameplaySaveData? gameplaySaveData)
     {
-        WorldLawSaveData? saveData = gameplaySaveData?.WorldLaw;
+        gameplaySaveData ??= new GameplaySaveData();
+        WorldLawSaveData? saveData = gameplaySaveData.WorldLaw;
         if (saveData is null)
         {
             return new WorldLawRuntimeState();
@@ -67,6 +68,47 @@ public static class WorldLawSaveMapper
                     TriggeredOmen = record.TriggeredOmen,
                 })
                 .ToList(),
+            Intent = new PlayerIntentRuntimeState
+            {
+                TextInputEnabled = gameplaySaveData.Intent.TextInputEnabled,
+                SubmittedIntentCount = gameplaySaveData.Intent.SubmittedIntentCount,
+                LastIntent = gameplaySaveData.Intent.LastIntent is null
+                    ? null
+                    : new PlayerIntentRecord
+                    {
+                        TimestampUtc = gameplaySaveData.Intent.LastIntent.TimestampUtc,
+                        RawText = gameplaySaveData.Intent.LastIntent.RawText,
+                        Topic = gameplaySaveData.Intent.LastIntent.Topic,
+                        Confidence = gameplaySaveData.Intent.LastIntent.Confidence,
+                        Summary = gameplaySaveData.Intent.LastIntent.Summary,
+                        SuggestedTargetBiome = gameplaySaveData.Intent.LastIntent.SuggestedTargetBiome,
+                    },
+                RecentIntents = gameplaySaveData.Intent.RecentIntents
+                    .Select(intent => new PlayerIntentRecord
+                    {
+                        TimestampUtc = intent.TimestampUtc,
+                        RawText = intent.RawText,
+                        Topic = intent.Topic,
+                        Confidence = intent.Confidence,
+                        Summary = intent.Summary,
+                        SuggestedTargetBiome = intent.SuggestedTargetBiome,
+                    })
+                    .ToList(),
+            },
+            Narrative = new HeroJourneyRuntimeState
+            {
+                CurrentStage = gameplaySaveData.Narrative.CurrentStage,
+                LastStageReason = string.IsNullOrWhiteSpace(gameplaySaveData.Narrative.LastStageReason) ? "Initial state." : gameplaySaveData.Narrative.LastStageReason,
+                LastAdvancedUtc = gameplaySaveData.Narrative.LastAdvancedUtc,
+                StageHistory = gameplaySaveData.Narrative.StageHistory
+                    .Select(stage => new HeroJourneyStageRecord
+                    {
+                        Stage = stage.Stage,
+                        TimestampUtc = stage.TimestampUtc,
+                        Reason = stage.Reason,
+                    })
+                    .ToList(),
+            },
         };
 
         ClampRuntimeState(runtimeState);
@@ -131,6 +173,47 @@ public static class WorldLawSaveMapper
                     })
                     .ToList(),
             },
+            Intent = new PlayerIntentSaveData
+            {
+                TextInputEnabled = runtimeState.Intent.TextInputEnabled,
+                SubmittedIntentCount = runtimeState.Intent.SubmittedIntentCount,
+                LastIntent = runtimeState.Intent.LastIntent is null
+                    ? null
+                    : new PlayerIntentRecordSaveData
+                    {
+                        TimestampUtc = runtimeState.Intent.LastIntent.TimestampUtc,
+                        RawText = runtimeState.Intent.LastIntent.RawText,
+                        Topic = runtimeState.Intent.LastIntent.Topic,
+                        Confidence = runtimeState.Intent.LastIntent.Confidence,
+                        Summary = runtimeState.Intent.LastIntent.Summary,
+                        SuggestedTargetBiome = runtimeState.Intent.LastIntent.SuggestedTargetBiome,
+                    },
+                RecentIntents = runtimeState.Intent.RecentIntents
+                    .Select(intent => new PlayerIntentRecordSaveData
+                    {
+                        TimestampUtc = intent.TimestampUtc,
+                        RawText = intent.RawText,
+                        Topic = intent.Topic,
+                        Confidence = intent.Confidence,
+                        Summary = intent.Summary,
+                        SuggestedTargetBiome = intent.SuggestedTargetBiome,
+                    })
+                    .ToList(),
+            },
+            Narrative = new HeroJourneySaveData
+            {
+                CurrentStage = runtimeState.Narrative.CurrentStage,
+                LastStageReason = runtimeState.Narrative.LastStageReason,
+                LastAdvancedUtc = runtimeState.Narrative.LastAdvancedUtc,
+                StageHistory = runtimeState.Narrative.StageHistory
+                    .Select(stage => new HeroJourneyStageRecordSaveData
+                    {
+                        Stage = stage.Stage,
+                        TimestampUtc = stage.TimestampUtc,
+                        Reason = stage.Reason,
+                    })
+                    .ToList(),
+            },
         };
     }
 
@@ -159,6 +242,12 @@ public static class WorldLawSaveMapper
         {
             runtimeState.RecentCausality = new List<CausalityRecord>();
         }
+
+        runtimeState.Intent ??= new PlayerIntentRuntimeState();
+        runtimeState.Intent.RecentIntents ??= new List<PlayerIntentRecord>();
+
+        runtimeState.Narrative ??= new HeroJourneyRuntimeState();
+        runtimeState.Narrative.StageHistory ??= new List<HeroJourneyStageRecord>();
     }
 
     private static float Clamp01(float value)

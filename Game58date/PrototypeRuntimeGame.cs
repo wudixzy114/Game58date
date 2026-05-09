@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Game58date.Gameplay;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Games;
@@ -19,6 +20,7 @@ public sealed class PrototypeRuntimeGame : Game
         await base.LoadContent();
 
         ConfigureWindowForGameplay();
+        RuntimeMode runtimeMode = RuntimeModeResolver.Resolve();
 
         var scene = SceneSystem.SceneInstance.RootScene;
         if (scene is null)
@@ -27,11 +29,22 @@ public sealed class PrototypeRuntimeGame : Game
             SceneSystem.SceneInstance.RootScene = scene;
         }
 
-        var anchor = scene.Entities.FirstOrDefault(entity => entity.Name == "PrototypeRuntime");
+        string runtimeAnchorName = runtimeMode == RuntimeMode.Prototype
+            ? "LegacyPrototypeRuntime"
+            : "PrototypeRuntime";
+        var anchor = scene.Entities.FirstOrDefault(entity => entity.Name == runtimeAnchorName);
         if (anchor is null)
         {
-            anchor = new Entity("PrototypeRuntime");
-            anchor.Add(new VoxelTerrainRuntimeScript());
+            anchor = new Entity(runtimeAnchorName);
+            if (runtimeMode == RuntimeMode.Prototype)
+            {
+                anchor.Add(new HeroJourneyPrototypeScript());
+            }
+            else
+            {
+                anchor.Add(new VoxelTerrainRuntimeScript());
+            }
+
             scene.Entities.Add(anchor);
         }
     }

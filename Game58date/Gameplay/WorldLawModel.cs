@@ -129,6 +129,10 @@ public sealed class WorldLawRuntimeState
 
     public List<CausalityRecord> RecentCausality { get; set; } = new();
 
+    public PlayerIntentRuntimeState Intent { get; set; } = new();
+
+    public HeroJourneyRuntimeState Narrative { get; set; } = new();
+
     public WorldLawRuntimeState Clone()
     {
         return new WorldLawRuntimeState
@@ -182,6 +186,113 @@ public sealed class WorldLawRuntimeState
                     TriggeredOmen = record.TriggeredOmen,
                 })
                 .ToList(),
+            Intent = Intent.Clone(),
+            Narrative = Narrative.Clone(),
         };
     }
+}
+
+public enum IntentTopic
+{
+    Unknown = 0,
+    Exploration = 1,
+    Mentor = 2,
+    Knowledge = 3,
+    Compassion = 4,
+    Domination = 5,
+}
+
+public sealed class PlayerIntentRecord
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    public string RawText { get; set; } = string.Empty;
+
+    public IntentTopic Topic { get; set; }
+
+    public float Confidence { get; set; }
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string SuggestedTargetBiome { get; set; } = string.Empty;
+}
+
+public sealed class PlayerIntentRuntimeState
+{
+    public bool TextInputEnabled { get; set; } = true;
+
+    public int SubmittedIntentCount { get; set; }
+
+    public PlayerIntentRecord? LastIntent { get; set; }
+
+    public List<PlayerIntentRecord> RecentIntents { get; set; } = new();
+
+    public PlayerIntentRuntimeState Clone()
+    {
+        return new PlayerIntentRuntimeState
+        {
+            TextInputEnabled = TextInputEnabled,
+            SubmittedIntentCount = SubmittedIntentCount,
+            LastIntent = LastIntent is null
+                ? null
+                : new PlayerIntentRecord
+                {
+                    TimestampUtc = LastIntent.TimestampUtc,
+                    RawText = LastIntent.RawText,
+                    Topic = LastIntent.Topic,
+                    Confidence = LastIntent.Confidence,
+                    Summary = LastIntent.Summary,
+                    SuggestedTargetBiome = LastIntent.SuggestedTargetBiome,
+                },
+            RecentIntents = RecentIntents
+                .Select(intent => new PlayerIntentRecord
+                {
+                    TimestampUtc = intent.TimestampUtc,
+                    RawText = intent.RawText,
+                    Topic = intent.Topic,
+                    Confidence = intent.Confidence,
+                    Summary = intent.Summary,
+                    SuggestedTargetBiome = intent.SuggestedTargetBiome,
+                })
+                .ToList(),
+        };
+    }
+}
+
+public sealed class HeroJourneyRuntimeState
+{
+    public HeroJourneyStage CurrentStage { get; set; } = HeroJourneyStage.OrdinaryWorld;
+
+    public string LastStageReason { get; set; } = "Initial state.";
+
+    public DateTimeOffset? LastAdvancedUtc { get; set; }
+
+    public List<HeroJourneyStageRecord> StageHistory { get; set; } = new();
+
+    public HeroJourneyRuntimeState Clone()
+    {
+        return new HeroJourneyRuntimeState
+        {
+            CurrentStage = CurrentStage,
+            LastStageReason = LastStageReason,
+            LastAdvancedUtc = LastAdvancedUtc,
+            StageHistory = StageHistory
+                .Select(entry => new HeroJourneyStageRecord
+                {
+                    Stage = entry.Stage,
+                    TimestampUtc = entry.TimestampUtc,
+                    Reason = entry.Reason,
+                })
+                .ToList(),
+        };
+    }
+}
+
+public sealed class HeroJourneyStageRecord
+{
+    public HeroJourneyStage Stage { get; set; }
+
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    public string Reason { get; set; } = string.Empty;
 }

@@ -31,6 +31,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     private bool hasTrackedEyePosition;
     private bool hudVisible = true;
     private bool textInputEnabled;
+    private PlayerIntentSystem? intentSystem;
+    private HeroJourneyDirector? heroJourneyDirector;
 
     public WorldLawEngine? Engine { get; private set; }
 
@@ -48,9 +50,12 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         }
 
         Engine = new WorldLawEngine(initialState.Clone());
+        intentSystem = new PlayerIntentSystem(Engine.State.Intent);
+        heroJourneyDirector = new HeroJourneyDirector(Engine.State.Narrative);
         Engine.LogGenerated += HandleLogGenerated;
         Engine.HeroStageAdvanced += HandleHeroStageAdvanced;
         Engine.OmenTriggered += HandleOmenTriggered;
+        heroJourneyDirector.StageAdvanced += HandleNarrativeStageAdvanced;
     }
 
     public override void Start()
@@ -60,7 +65,11 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             throw new InvalidOperationException("World law runtime controller must be initialized before Start.");
         }
 
-        EnableTextInput();
+        textInputEnabled = Engine.State.Intent.TextInputEnabled;
+        if (textInputEnabled)
+        {
+            EnableTextInput();
+        }
         PushLog("World law runtime ready.");
         PushLog("Tab input toggle. Enter submit intent. F2 sea. F3 loss. F4 violent. F5 peaceful. F6 mentor.");
         UpdateLighting();
@@ -77,6 +86,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         HandleHotkeys();
         TrackExplorationProgress();
         Engine.Tick(deltaTime);
+        SyncNarrativeState();
         UpdateLighting();
         DrawHud();
     }
@@ -90,6 +100,11 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             Engine.LogGenerated -= HandleLogGenerated;
             Engine.HeroStageAdvanced -= HandleHeroStageAdvanced;
             Engine.OmenTriggered -= HandleOmenTriggered;
+        }
+
+        if (heroJourneyDirector is not null)
+        {
+            heroJourneyDirector.StageAdvanced -= HandleNarrativeStageAdvanced;
         }
 
         base.Cancel();
@@ -159,12 +174,12 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         {
             string intent = intentBuffer.ToString();
             intentBuffer.Clear();
-            Engine.SubmitIntent(intent);
+            SubmitIntent(intent);
         }
 
         if (Input.IsKeyPressed(Keys.F2))
         {
-            Engine.SubmitIntent("I want to cross the sea and reach a new trial.");
+            SubmitIntent("I want to cross the sea and reach a new trial.");
         }
 
         if (Input.IsKeyPressed(Keys.F3))
@@ -184,7 +199,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
         if (Input.IsKeyPressed(Keys.F6))
         {
-            Engine.SubmitIntent("I want to find a mentor and a sign.");
+            SubmitIntent("I want to find a mentor and a sign.");
         }
     }
 
@@ -213,6 +228,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
         lastTrackedEyePosition = currentEyePosition;
         Engine.RegisterExplorationProgress(distance);
+        SyncNarrativeState();
     }
 
     private void UpdateLighting()
@@ -237,7 +253,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
         lightComponent.Intensity = MathF.Max(5f, baseLightIntensity * baseWave + omenBoost + state.World.Karma * 1.4f);
 
-        Color3 stageColor = state.HeroStage switch
+        Color3 stageColor = state.Narrative.CurrentStage switch
         {
             HeroJourneyStage.OrdinaryWorld => new Color3(1.00f, 1.00f, 1.00f),
             HeroJourneyStage.CallToAdventure => new Color3(1.00f, 0.92f, 0.80f),
@@ -268,7 +284,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
         WorldLawRuntimeState state = Engine.State;
         debugText.Print("Game58date world law runtime", new Int2(20, 20), HudTitleColor);
-        debugText.Print($"Hero stage: {WorldLawEngine.GetStageTitle(state.HeroStage)}", new Int2(20, 44), HudTextColor);
+        debugText.Print($"Hero stage: {WorldLawEngine.GetStageTitle(state.Narrative.CurrentStage)}", new Int2(20, 44), HudTextColor);
         debugText.Print($"Target biome: {state.World.TargetBiome}", new Int2(20, 68), HudTextColor);
         debugText.Print(
             $"World law  explore {AsPct(state.World.ExplorationDrive)}  karma {state.World.Karma:+0.00;-0.00;0.00}  blessing {AsPct(state.World.BlessingWeight)}  pressure {AsPct(state.World.ResourcePressure)}",
@@ -286,10 +302,14 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             $"Counts     actions {state.Behavior.RecordedActions}  intents {state.Behavior.IntentActions}  peace {state.Behavior.PeacefulActions}  violent {state.Behavior.ViolentActions}  losses {state.Behavior.LossEvents}",
             new Int2(20, 168),
             HudTextColor);
-        debugText.Print("Tab input toggle  Enter submit  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor  F1 HUD", new Int2(20, 196), HudHintColor);
-        debugText.Print($"> {intentBuffer}", new Int2(20, 220), textInputEnabled ? HudInputColor : HudDisabledColor);
+        debugText.Print(
+            $"Intent     {GetIntentTopicTitle(state.Intent.LastIntent?.Topic ?? IntentTopic.Unknown)}  conf {(state.Intent.LastIntent?.Confidence ?? 0f) * 100f:0}%  total {state.Intent.SubmittedIntentCount}",
+            new Int2(20, 192),
+            HudTextColor);
+        debugText.Print("Tab input toggle  Enter submit  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor  F1 HUD", new Int2(20, 220), HudHintColor);
+        debugText.Print($"> {intentBuffer}", new Int2(20, 244), textInputEnabled ? HudInputColor : HudDisabledColor);
 
-        int line = 256;
+        int line = 280;
         foreach (string entry in eventLog)
         {
             debugText.Print(entry, new Int2(20, line), HudLogColor);
@@ -309,6 +329,19 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
     private void HandleOmenTriggered(OmenType _, string __)
     {
+        UpdateLighting();
+    }
+
+    private void HandleNarrativeStageAdvanced(HeroJourneyStage stage, string reason)
+    {
+        if (Engine is null)
+        {
+            return;
+        }
+
+        Engine.State.HeroStage = stage;
+        PushLog($"Narrative: {WorldLawEngine.GetStageTitle(stage)}");
+        PushLog(reason);
         UpdateLighting();
     }
 
@@ -332,6 +365,10 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         textInputEnabled = true;
         Input.AddListener(this);
         Input.TextInput?.EnabledTextInput();
+        if (Engine is not null)
+        {
+            Engine.State.Intent.TextInputEnabled = true;
+        }
     }
 
     private void DisableTextInput()
@@ -344,6 +381,45 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         textInputEnabled = false;
         Input.TextInput?.DisableTextInput();
         Input.RemoveListener(this);
+        if (Engine is not null)
+        {
+            Engine.State.Intent.TextInputEnabled = false;
+        }
+    }
+
+    private void SubmitIntent(string rawIntent)
+    {
+        if (Engine is null || intentSystem is null)
+        {
+            return;
+        }
+
+        PlayerIntentRecord? record = intentSystem.Submit(rawIntent);
+        if (record is null)
+        {
+            PushLog("Empty intent ignored.");
+            return;
+        }
+
+        PushLog($"Intent topic: {GetIntentTopicTitle(record.Topic)} ({record.Confidence * 100f:0}%)");
+        if (!string.IsNullOrWhiteSpace(record.SuggestedTargetBiome))
+        {
+            Engine.State.World.TargetBiome = record.SuggestedTargetBiome;
+        }
+
+        Engine.SubmitIntent(record.RawText);
+        SyncNarrativeState();
+    }
+
+    private void SyncNarrativeState()
+    {
+        if (Engine is null || heroJourneyDirector is null)
+        {
+            return;
+        }
+
+        heroJourneyDirector.Evaluate(Engine.State);
+        Engine.State.HeroStage = Engine.State.Narrative.CurrentStage;
     }
 
     private static string AsPct(float value)
@@ -358,5 +434,18 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             from.R + (to.R - from.R) * amount,
             from.G + (to.G - from.G) * amount,
             from.B + (to.B - from.B) * amount);
+    }
+
+    private static string GetIntentTopicTitle(IntentTopic topic)
+    {
+        return topic switch
+        {
+            IntentTopic.Exploration => "Exploration",
+            IntentTopic.Mentor => "Mentor",
+            IntentTopic.Knowledge => "Knowledge",
+            IntentTopic.Compassion => "Compassion",
+            IntentTopic.Domination => "Domination",
+            _ => "Unknown",
+        };
     }
 }

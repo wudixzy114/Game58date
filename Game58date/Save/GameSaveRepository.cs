@@ -152,6 +152,10 @@ public sealed class GameSaveRepository
         saveData.Gameplay.WorldLaw.World ??= new WorldLawStateSaveData();
         saveData.Gameplay.WorldLaw.Behavior ??= new PlayerBehaviorSaveData();
         saveData.Gameplay.WorldLaw.RecentCausality ??= new List<CausalityRecordSaveData>();
+        saveData.Gameplay.Intent ??= new PlayerIntentSaveData();
+        saveData.Gameplay.Intent.RecentIntents ??= new List<PlayerIntentRecordSaveData>();
+        saveData.Gameplay.Narrative ??= new HeroJourneySaveData();
+        saveData.Gameplay.Narrative.StageHistory ??= new List<HeroJourneyStageRecordSaveData>();
     }
 
     private static void BackupCorruptSave(string slotPath)

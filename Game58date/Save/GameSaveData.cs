@@ -69,6 +69,10 @@ public sealed class TerrainSaveData
 public sealed class GameplaySaveData
 {
     public WorldLawSaveData WorldLaw { get; set; } = new();
+
+    public PlayerIntentSaveData Intent { get; set; } = new();
+
+    public HeroJourneySaveData Narrative { get; set; } = new();
 }
 
 public sealed class ChunkOverrideSaveData
@@ -179,6 +183,52 @@ public sealed class CausalityRecordSaveData
     public float BlessingDelta { get; set; }
 
     public OmenType TriggeredOmen { get; set; }
+}
+
+public sealed class PlayerIntentSaveData
+{
+    public bool TextInputEnabled { get; set; } = true;
+
+    public int SubmittedIntentCount { get; set; }
+
+    public PlayerIntentRecordSaveData? LastIntent { get; set; }
+
+    public List<PlayerIntentRecordSaveData> RecentIntents { get; set; } = new();
+}
+
+public sealed class PlayerIntentRecordSaveData
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    public string RawText { get; set; } = string.Empty;
+
+    public IntentTopic Topic { get; set; }
+
+    public float Confidence { get; set; }
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string SuggestedTargetBiome { get; set; } = string.Empty;
+}
+
+public sealed class HeroJourneySaveData
+{
+    public HeroJourneyStage CurrentStage { get; set; }
+
+    public string LastStageReason { get; set; } = "Initial state.";
+
+    public DateTimeOffset? LastAdvancedUtc { get; set; }
+
+    public List<HeroJourneyStageRecordSaveData> StageHistory { get; set; } = new();
+}
+
+public sealed class HeroJourneyStageRecordSaveData
+{
+    public HeroJourneyStage Stage { get; set; }
+
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    public string Reason { get; set; } = string.Empty;
 }
 
 public sealed class SerializableVector3
