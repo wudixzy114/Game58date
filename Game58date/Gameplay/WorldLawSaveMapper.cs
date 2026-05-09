@@ -136,6 +136,15 @@ public static class WorldLawSaveMapper
                     })
                     .ToList(),
             },
+            Perception = new PerceptionRuntimeState
+            {
+                IsActive = gameplaySaveData.Perception.IsActive,
+                ActiveSecondsRemaining = gameplaySaveData.Perception.ActiveSecondsRemaining,
+                CooldownSecondsRemaining = gameplaySaveData.Perception.CooldownSecondsRemaining,
+                Intensity = gameplaySaveData.Perception.Intensity,
+                ActivationCount = gameplaySaveData.Perception.ActivationCount,
+                LastActivatedUtc = gameplaySaveData.Perception.LastActivatedUtc,
+            },
         };
 
         ClampRuntimeState(runtimeState);
@@ -268,6 +277,15 @@ public static class WorldLawSaveMapper
                     })
                     .ToList(),
             },
+            Perception = new PerceptionSaveData
+            {
+                IsActive = runtimeState.Perception.IsActive,
+                ActiveSecondsRemaining = runtimeState.Perception.ActiveSecondsRemaining,
+                CooldownSecondsRemaining = runtimeState.Perception.CooldownSecondsRemaining,
+                Intensity = runtimeState.Perception.Intensity,
+                ActivationCount = runtimeState.Perception.ActivationCount,
+                LastActivatedUtc = runtimeState.Perception.LastActivatedUtc,
+            },
         };
     }
 
@@ -304,6 +322,7 @@ public static class WorldLawSaveMapper
         runtimeState.Narrative.StageHistory ??= new List<HeroJourneyStageRecord>();
         runtimeState.Omen ??= new OmenRuntimeState();
         runtimeState.Omen.History ??= new List<OmenRecord>();
+        runtimeState.Perception ??= new PerceptionRuntimeState();
     }
 
     private static float Clamp01(float value)

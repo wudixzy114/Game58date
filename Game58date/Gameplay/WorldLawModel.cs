@@ -135,6 +135,8 @@ public sealed class WorldLawRuntimeState
 
     public OmenRuntimeState Omen { get; set; } = new();
 
+    public PerceptionRuntimeState Perception { get; set; } = new();
+
     public WorldLawRuntimeState Clone()
     {
         return new WorldLawRuntimeState
@@ -191,6 +193,7 @@ public sealed class WorldLawRuntimeState
             Intent = Intent.Clone(),
             Narrative = Narrative.Clone(),
             Omen = Omen.Clone(),
+            Perception = Perception.Clone(),
         };
     }
 }
@@ -364,6 +367,34 @@ public sealed class OmenRuntimeState
                     Description = omen.Description,
                 })
                 .ToList(),
+        };
+    }
+}
+
+public sealed class PerceptionRuntimeState
+{
+    public bool IsActive { get; set; }
+
+    public float ActiveSecondsRemaining { get; set; }
+
+    public float CooldownSecondsRemaining { get; set; }
+
+    public float Intensity { get; set; }
+
+    public int ActivationCount { get; set; }
+
+    public DateTimeOffset? LastActivatedUtc { get; set; }
+
+    public PerceptionRuntimeState Clone()
+    {
+        return new PerceptionRuntimeState
+        {
+            IsActive = IsActive,
+            ActiveSecondsRemaining = ActiveSecondsRemaining,
+            CooldownSecondsRemaining = CooldownSecondsRemaining,
+            Intensity = Intensity,
+            ActivationCount = ActivationCount,
+            LastActivatedUtc = LastActivatedUtc,
         };
     }
 }

@@ -158,6 +158,7 @@ public sealed class GameSaveRepository
         saveData.Gameplay.Narrative.StageHistory ??= new List<HeroJourneyStageRecordSaveData>();
         saveData.Gameplay.Omen ??= new OmenSaveData();
         saveData.Gameplay.Omen.History ??= new List<OmenRecordSaveData>();
+        saveData.Gameplay.Perception ??= new PerceptionSaveData();
     }
 
     private static void BackupCorruptSave(string slotPath)

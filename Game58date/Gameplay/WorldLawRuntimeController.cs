@@ -34,6 +34,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     private PlayerIntentSystem? intentSystem;
     private HeroJourneyDirector? heroJourneyDirector;
     private OmenDirector? omenDirector;
+    private PerceptionSkillController? perceptionSkillController;
+    private OmenPresentationController? omenPresentationController;
 
     public WorldLawEngine? Engine { get; private set; }
 
@@ -41,6 +43,23 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
     public void Initialize(WorldLawRuntimeState initialState, Entity camera, Entity? directionalLight)
     {
+        if (Engine is not null)
+        {
+            Engine.LogGenerated -= HandleLogGenerated;
+            Engine.HeroStageAdvanced -= HandleHeroStageAdvanced;
+            Engine.OmenTriggered -= HandleOmenTriggered;
+        }
+
+        if (heroJourneyDirector is not null)
+        {
+            heroJourneyDirector.StageAdvanced -= HandleNarrativeStageAdvanced;
+        }
+
+        if (omenDirector is not null)
+        {
+            omenDirector.OmenActivated -= HandleOmenActivated;
+        }
+
         cameraEntity = camera ?? throw new ArgumentNullException(nameof(camera));
         lightEntity = directionalLight;
         lightComponent = directionalLight?.Get<LightComponent>();
@@ -54,6 +73,13 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         intentSystem = new PlayerIntentSystem(Engine.State.Intent);
         heroJourneyDirector = new HeroJourneyDirector(Engine.State.Narrative);
         omenDirector = new OmenDirector(Engine.State.Omen);
+        perceptionSkillController = new PerceptionSkillController(Engine.State.Perception);
+        omenPresentationController = new OmenPresentationController();
+        Scene? scene = camera.Scene ?? directionalLight?.Scene ?? Entity?.Scene;
+        if (scene is not null)
+        {
+            omenPresentationController.Initialize(scene);
+        }
         Engine.LogGenerated += HandleLogGenerated;
         Engine.HeroStageAdvanced += HandleHeroStageAdvanced;
         Engine.OmenTriggered += HandleOmenTriggered;
@@ -74,7 +100,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             EnableTextInput();
         }
         PushLog("World law runtime ready.");
-        PushLog("Tab input toggle. Enter submit intent. F2 sea. F3 loss. F4 violent. F5 peaceful. F6 mentor.");
+        PushLog("Tab input toggle. Enter submit intent. F2 sea. F3 loss. F4 violent. F5 peaceful. F6 mentor. Q perception.");
         UpdateLighting();
     }
 
@@ -90,7 +116,9 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         TrackExplorationProgress();
         Engine.Tick(deltaTime);
         SyncOmenState(deltaTime);
+        SyncPerceptionState(deltaTime);
         SyncNarrativeState();
+        omenPresentationController?.Update(Engine.State, deltaTime);
         UpdateLighting();
         DrawHud();
     }
@@ -210,6 +238,11 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         {
             SubmitIntent("I want to find a mentor and a sign.");
         }
+
+        if (Input.IsKeyPressed(Keys.Q))
+        {
+            ActivatePerception();
+        }
     }
 
     private void TrackExplorationProgress()
@@ -261,7 +294,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             _ => 0f,
         };
 
-        lightComponent.Intensity = MathF.Max(5f, baseLightIntensity * baseWave + omenBoost + state.World.Karma * 1.4f);
+        float perceptionBoost = state.Perception.IsActive ? state.Perception.Intensity * 4.5f : 0f;
+        lightComponent.Intensity = MathF.Max(5f, baseLightIntensity * baseWave + omenBoost + perceptionBoost + state.World.Karma * 1.4f);
 
         Color3 stageColor = state.Narrative.CurrentStage switch
         {
@@ -276,6 +310,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         };
 
         float omenBlendBoost = state.Omen.ActiveOmen is null ? 0f : state.Omen.ActiveOmen.Score * 0.15f;
+        omenBlendBoost += state.Perception.IsActive ? state.Perception.Intensity * 0.18f : 0f;
         float blend = MathUtil.Clamp(state.World.Atmosphere * 0.55f + state.World.PathVisibility * 0.45f + omenBlendBoost, 0f, 1f);
         lightComponent.SetColor(LerpColor(baseLightColor, stageColor, blend));
     }
@@ -321,10 +356,14 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             $"Intent     {GetIntentTopicTitle(state.Intent.LastIntent?.Topic ?? IntentTopic.Unknown)}  conf {(state.Intent.LastIntent?.Confidence ?? 0f) * 100f:0}%  total {state.Intent.SubmittedIntentCount}",
             new Int2(20, 216),
             HudTextColor);
-        debugText.Print("Tab input toggle  Enter submit  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor  F1 HUD", new Int2(20, 244), HudHintColor);
-        debugText.Print($"> {intentBuffer}", new Int2(20, 268), textInputEnabled ? HudInputColor : HudDisabledColor);
+        debugText.Print(
+            $"Sense      active {(state.Perception.IsActive ? "yes" : "no")}  power {AsPct(state.Perception.Intensity)}  remain {state.Perception.ActiveSecondsRemaining:0.0}s  cd {state.Perception.CooldownSecondsRemaining:0.0}s",
+            new Int2(20, 240),
+            HudTextColor);
+        debugText.Print("Tab input toggle  Enter submit  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor  Q sense  F1 HUD", new Int2(20, 268), HudHintColor);
+        debugText.Print($"> {intentBuffer}", new Int2(20, 292), textInputEnabled ? HudInputColor : HudDisabledColor);
 
-        int line = 304;
+        int line = 328;
         foreach (string entry in eventLog)
         {
             debugText.Print(entry, new Int2(20, line), HudLogColor);
@@ -378,6 +417,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         }
 
         PushLog($"Omen[{GetOmenSourceTitle(omenRecord.Source)}]: {omenRecord.Description}");
+        omenPresentationController?.HandleOmenActivated(omenRecord);
         UpdateLighting();
     }
 
@@ -461,6 +501,25 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         SyncNarrativeState();
     }
 
+    private void ActivatePerception()
+    {
+        if (Engine is null || perceptionSkillController is null)
+        {
+            return;
+        }
+
+        float omenScore = Engine.State.Omen.ActiveOmen?.Score ?? Engine.State.Omen.LastScore;
+        if (!perceptionSkillController.TryActivate(omenScore))
+        {
+            PushLog("Perception skill is unavailable.");
+            return;
+        }
+
+        PushLog($"Perception activated at {omenScore * 100f:0}% omen intensity.");
+        omenPresentationController?.HandlePerceptionActivated(Engine.State.Perception.Intensity);
+        UpdateLighting();
+    }
+
     private void SyncOmenState(float deltaTime)
     {
         if (Engine is null || omenDirector is null)
@@ -477,6 +536,17 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         {
             omenDirector.NotifyCausality(latestCausality, Engine.State);
         }
+    }
+
+    private void SyncPerceptionState(float deltaTime)
+    {
+        if (Engine is null || perceptionSkillController is null)
+        {
+            return;
+        }
+
+        float omenScore = Engine.State.Omen.ActiveOmen?.Score ?? Engine.State.Omen.LastScore;
+        perceptionSkillController.Tick(deltaTime, omenScore);
     }
 
     private void SyncNarrativeState()

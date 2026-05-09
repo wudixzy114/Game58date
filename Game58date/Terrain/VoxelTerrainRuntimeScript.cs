@@ -201,8 +201,8 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         if (controller is null)
         {
             controller = new WorldLawRuntimeController();
-            controller.Initialize(WorldLawSaveMapper.BuildRuntimeState(gameplaySaveData), camera, directionalLightEntity);
             Entity.Add(controller);
+            controller.Initialize(WorldLawSaveMapper.BuildRuntimeState(gameplaySaveData), camera, directionalLightEntity);
             return controller;
         }
 

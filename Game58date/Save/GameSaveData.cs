@@ -75,6 +75,8 @@ public sealed class GameplaySaveData
     public HeroJourneySaveData Narrative { get; set; } = new();
 
     public OmenSaveData Omen { get; set; } = new();
+
+    public PerceptionSaveData Perception { get; set; } = new();
 }
 
 public sealed class ChunkOverrideSaveData
@@ -259,6 +261,21 @@ public sealed class OmenRecordSaveData
     public float Score { get; set; }
 
     public string Description { get; set; } = string.Empty;
+}
+
+public sealed class PerceptionSaveData
+{
+    public bool IsActive { get; set; }
+
+    public float ActiveSecondsRemaining { get; set; }
+
+    public float CooldownSecondsRemaining { get; set; }
+
+    public float Intensity { get; set; }
+
+    public int ActivationCount { get; set; }
+
+    public DateTimeOffset? LastActivatedUtc { get; set; }
 }
 
 public sealed class SerializableVector3
