@@ -9,8 +9,6 @@ Hierarchy:
         - ref!! 06317bd7-79a9-41ba-945b-64f95eaab850
         - ref!! bee47f7f-cb89-4667-ba5d-2d159510f417
         - ref!! f145e669-2724-404e-8789-80276fa007a8
-        - ref!! f3930c0a-168d-417a-9468-0431fa8c2791
-        - ref!! 3169133f-e2c6-4621-9346-7c2ba1d44fde
     Parts:
         -   Entity:
                 Id: 06317bd7-79a9-41ba-945b-64f95eaab850
@@ -27,30 +25,6 @@ Hierarchy:
                         Name: null
                         Projection: Perspective
                         Slot: ba621455-cfc8-4120-85d0-22ed1553bf5c
-                    d352fde88f0f5954ad59a71a286ddb75: !Game58date.BasicCameraController,Game58date
-                        Id: b0bf5f9d-e2ec-47b9-9395-7810385a502d
-                        Gamepad: false
-                        IsControlEnabled: true
-                        KeyboardMovementSpeed: {X: 5.0, Y: 5.0, Z: 5.0}
-                        TouchMovementSpeed: {X: 0.7, Y: 0.7, Z: 0.3}
-                        SpeedFactor: 5.0
-                        KeyboardRotationSpeed: {X: 3.0, Y: 3.0}
-                        MouseRotationSpeed: {X: 1.0, Y: 1.0}
-                        TouchRotationSpeed: {X: 1.0, Y: 0.7}
-        -   Entity:
-                Id: 3169133f-e2c6-4621-9346-7c2ba1d44fde
-                Name: Sphere
-                Components:
-                    fed0f86d0c689e046f566d571a329b51: !TransformComponent
-                        Id: 9a45d835-511f-40a4-9cb2-fdf71fe72dcd
-                        Position: {X: 0.0, Y: 0.5, Z: 0.0}
-                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
-                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
-                        Children: {}
-                    99d526fb0ae347f094d2e3bbffed170a: !ModelComponent
-                        Id: 91403d57-5904-4b83-baf0-32abf75dc049
-                        Model: c1c3ff41-c6df-4b50-928b-dc63f5c37cbc:Sphere
-                        Materials: {}
         -   Entity:
                 Id: bee47f7f-cb89-4667-ba5d-2d159510f417
                 Name: Directional light
@@ -93,17 +67,3 @@ Hierarchy:
                         Id: 16b12810-55cb-48d4-b5d5-27e807f830f9
                         Type: !LightSkybox
                             Skybox: 604d25b8-6a6e-4cd4-876c-9fe8be4df36b:Skybox
-        -   Entity:
-                Id: f3930c0a-168d-417a-9468-0431fa8c2791
-                Name: Ground
-                Components:
-                    ddbb5c9a12a4aeb5dca6f9f4befdb09f: !TransformComponent
-                        Id: 530b06ac-4aeb-4afc-95b6-f16bc6d9bb5d
-                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
-                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
-                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
-                        Children: {}
-                    cba35711bfeba9ad2c3f4514e726895d: !ModelComponent
-                        Id: c7e9aec4-7b47-46b2-b7ae-3dfe161955a8
-                        Model: 11d4626c-39d1-48d4-a17b-a3a85df2b0f1:Ground
-                        Materials: {}
