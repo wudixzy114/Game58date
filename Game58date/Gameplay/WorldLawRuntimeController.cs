@@ -29,7 +29,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     private float baseLightIntensity;
     private Vector3 lastTrackedEyePosition;
     private bool hasTrackedEyePosition;
-    private bool hudVisible = true;
+    private bool hudVisible;
     private bool textInputEnabled;
     private PlayerIntentSystem? intentSystem;
     private HeroJourneyDirector? heroJourneyDirector;
@@ -40,6 +40,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     public WorldLawEngine? Engine { get; private set; }
 
     public WorldLawRuntimeState RuntimeState => Engine?.State ?? new WorldLawRuntimeState();
+
+    public bool IsDebugHudVisible => hudVisible;
 
     public void Initialize(WorldLawRuntimeState initialState, Entity camera, Entity? directionalLight)
     {
@@ -99,6 +101,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         {
             EnableTextInput();
         }
+        hudVisible = RuntimeModeResolver.Resolve() == RuntimeMode.Prototype;
         PushLog("World law runtime ready.");
         PushLog("Tab input toggle. Enter submit intent. F2 sea. F3 loss. F4 violent. F5 peaceful. F6 mentor. Q perception.");
         UpdateLighting();
@@ -474,6 +477,23 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         {
             Engine.State.Intent.TextInputEnabled = false;
         }
+    }
+
+    public void SetIntentTextInputEnabled(bool enabled)
+    {
+        if (enabled)
+        {
+            EnableTextInput();
+        }
+        else
+        {
+            DisableTextInput();
+        }
+    }
+
+    public void SetDebugHudVisible(bool visible)
+    {
+        hudVisible = visible;
     }
 
     private void SubmitIntent(string rawIntent)

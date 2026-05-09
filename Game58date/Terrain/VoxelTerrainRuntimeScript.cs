@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using Game58date.Gameplay;
+using Game58date.Gameplay.UI;
 using Game58date.Save;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
@@ -58,6 +59,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         Entity directionalLightEntity = sceneBootstrapper.EnsureTerrainLighting(scene);
         sceneBootstrapper.PruneLegacySceneEntities(scene);
         worldLawController = EnsureWorldLawController(cameraEntity, directionalLightEntity, activeSaveData.Gameplay);
+        EnsureGameUiController();
 
         Vector3 desiredSpawnPosition = cameraEntity.Transform.Position;
         if (activeSaveData.Player.EyePosition is { } savedEyePosition && savedEyePosition.IsFinite)
@@ -208,6 +210,17 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
 
         controller.Initialize(WorldLawSaveMapper.BuildRuntimeState(gameplaySaveData), camera, directionalLightEntity);
         return controller;
+    }
+
+    private void EnsureGameUiController()
+    {
+        GameUiRuntimeController? uiController = Entity.Get<GameUiRuntimeController>();
+        if (uiController is not null)
+        {
+            return;
+        }
+
+        Entity.Add(new GameUiRuntimeController());
     }
 
     private static bool NearlyEqual(Vector3 left, Vector3 right)
