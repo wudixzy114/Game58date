@@ -371,7 +371,7 @@ public sealed class VoxelTerrainWorldRuntime
     {
         TerrainRuntimeLogger.Logger.Info($"Warmup-building spawn chunk {coordinate} synchronously.");
         VoxelChunkData data = generator.Generate(coordinate);
-        VoxelChunkMeshData meshData = mesher.Build(data);
+        VoxelChunkMeshData meshData = mesher.Build(data, generator.SampleBlockWorld);
         VoxelChunkCollisionData collisionData = collisionBuilder.Build(data);
         return new ChunkBuildResult(nextRevision++, coordinate, data, meshData, collisionData);
     }

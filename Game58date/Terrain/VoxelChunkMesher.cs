@@ -1,3 +1,4 @@
+﻿#nullable enable
 using System;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
@@ -30,15 +31,20 @@ public sealed class VoxelChunkMesher
 
     public VoxelChunkMeshData Build(VoxelChunkData chunk)
     {
+        return Build(chunk, null);
+    }
+
+    public VoxelChunkMeshData Build(VoxelChunkData chunk, Func<int, int, int, BlockKind>? sampleBlockWorld)
+    {
         var mesh = new VoxelChunkMeshData();
         float scale = settings.VoxelScale;
-        BuildSurfaceMesh(chunk, mesh.Solid, scale, meshingWater: false);
-        BuildSurfaceMesh(chunk, mesh.Water, scale, meshingWater: true);
+        BuildSurfaceMesh(chunk, mesh.Solid, scale, meshingWater: false, sampleBlockWorld);
+        BuildSurfaceMesh(chunk, mesh.Water, scale, meshingWater: true, sampleBlockWorld);
 
         return mesh;
     }
 
-    private static void BuildSurfaceMesh(VoxelChunkData chunk, VoxelSurfaceMeshData surface, float scale, bool meshingWater)
+    private static void BuildSurfaceMesh(VoxelChunkData chunk, VoxelSurfaceMeshData surface, float scale, bool meshingWater, Func<int, int, int, BlockKind>? sampleBlockWorld)
     {
         Vector3 min = Vector3.Zero;
         Vector3 max = min;
@@ -54,7 +60,7 @@ public sealed class VoxelChunkMesher
 
             for (int plane = 0; plane <= planeLimit; plane++)
             {
-                BuildMask(chunk, face, plane, mask, duLimit, dvLimit, meshingWater);
+                BuildMask(chunk, face, plane, mask, duLimit, dvLimit, meshingWater, sampleBlockWorld);
                 EmitGreedyQuads(surface, face, plane, mask, duLimit, dvLimit, scale, ref max);
             }
         }
@@ -73,7 +79,8 @@ public sealed class VoxelChunkMesher
         Span<FaceMaskCell> mask,
         int duLimit,
         int dvLimit,
-        bool meshingWater)
+        bool meshingWater,
+        Func<int, int, int, BlockKind>? sampleBlockWorld)
     {
         int index = 0;
 
@@ -92,8 +99,8 @@ public sealed class VoxelChunkMesher
                 solid[face.VAxis] = dv;
                 empty[face.VAxis] = dv;
 
-                BlockKind solidBlock = chunk.GetBlock(solid[0], solid[1], solid[2]);
-                BlockKind emptyBlock = chunk.GetBlock(empty[0], empty[1], empty[2]);
+                BlockKind solidBlock = SampleBlock(chunk, solid[0], solid[1], solid[2], sampleBlockWorld);
+                BlockKind emptyBlock = SampleBlock(chunk, empty[0], empty[1], empty[2], sampleBlockWorld);
 
                 bool shouldEmit = meshingWater
                     ? IsWater(solidBlock) && IsAir(emptyBlock)
@@ -254,6 +261,23 @@ public sealed class VoxelChunkMesher
     private static bool IsAir(BlockKind block)
     {
         return block == BlockKind.Air;
+    }
+
+    private static BlockKind SampleBlock(VoxelChunkData chunk, int localX, int localY, int localZ, Func<int, int, int, BlockKind>? sampleBlockWorld)
+    {
+        if ((uint)localX < (uint)chunk.Size && (uint)localZ < (uint)chunk.Size && (uint)localY < (uint)chunk.Height)
+        {
+            return chunk.GetBlock(localX, localY, localZ);
+        }
+
+        if (sampleBlockWorld is null)
+        {
+            return BlockKind.Air;
+        }
+
+        int worldX = chunk.Coordinate.X * chunk.Size + localX;
+        int worldZ = chunk.Coordinate.Z * chunk.Size + localZ;
+        return sampleBlockWorld(worldX, localY, worldZ);
     }
 
     private static void ValidateFaceDefinitions()

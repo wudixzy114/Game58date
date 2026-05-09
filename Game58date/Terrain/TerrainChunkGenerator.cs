@@ -40,6 +40,31 @@ public sealed class TerrainChunkGenerator
         return chunk;
     }
 
+    public BlockKind SampleBlockWorld(int worldX, int worldY, int worldZ)
+    {
+        if (worldY < 0 || worldY >= settings.ChunkHeight)
+        {
+            return BlockKind.Air;
+        }
+
+        WorldSample sample = sampler.SampleSurface(worldX, worldZ);
+        BlockKind block = ResolveBlockKind(worldX, worldY, worldZ, sample);
+
+        int chunkX = VoxelGridMath.FloorDiv(worldX, settings.ChunkSize);
+        int chunkZ = VoxelGridMath.FloorDiv(worldZ, settings.ChunkSize);
+        if (!overrideStore.TryGetChunkOverrides(new VoxelChunkCoordinate(chunkX, chunkZ), out IReadOnlyDictionary<int, BlockKind>? chunkOverrides) || chunkOverrides is null)
+        {
+            return block;
+        }
+
+        int localX = VoxelGridMath.PositiveMod(worldX, settings.ChunkSize);
+        int localZ = VoxelGridMath.PositiveMod(worldZ, settings.ChunkSize);
+        int index = localX + settings.ChunkSize * (localZ + settings.ChunkSize * worldY);
+        return chunkOverrides.TryGetValue(index, out BlockKind overriddenBlock)
+            ? overriddenBlock
+            : block;
+    }
+
     private void FillColumn(VoxelChunkData chunk, int localX, int localZ, int worldX, int worldZ, WorldSample sample)
     {
         for (int y = 0; y < chunk.Height; y++)

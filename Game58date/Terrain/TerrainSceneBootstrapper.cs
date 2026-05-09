@@ -37,6 +37,11 @@ public sealed class TerrainSceneBootstrapper
             cameraEntity.Add(new CameraComponent());
         }
 
+        CameraComponent camera = cameraEntity.Get<CameraComponent>()!;
+        camera.NearClipPlane = 0.03f;
+        camera.FarClipPlane = 1200f;
+        camera.VerticalFieldOfView = 70f;
+
         return cameraEntity;
     }
 

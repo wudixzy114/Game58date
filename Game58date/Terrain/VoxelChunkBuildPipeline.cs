@@ -133,7 +133,7 @@ public sealed class VoxelChunkBuildPipeline
     private ChunkBuildResult BuildChunk(ChunkBuildRequest request)
     {
         VoxelChunkData data = generator.Generate(request.Coordinate);
-        VoxelChunkMeshData meshData = mesher.Build(data);
+        VoxelChunkMeshData meshData = mesher.Build(data, generator.SampleBlockWorld);
         VoxelChunkCollisionData collisionData = collisionBuilder.Build(data);
         return new ChunkBuildResult(request.Revision, request.Coordinate, data, meshData, collisionData);
     }

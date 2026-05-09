@@ -11,6 +11,9 @@ public sealed class FirstPersonCharacterController : SyncScript
     private const float MaximumPitch = MathUtil.PiOverTwo * 0.49f;
     private const float SkinWidth = 0.02f;
     private const float DefaultMouseSensitivity = 0.0022f;
+    private const float GroundSnapDistance = 0.08f;
+    private const float JumpInputGracePeriod = 0.14f;
+    private const float CoyoteTime = 0.12f;
 
     public const float DefaultRadius = 0.35f;
     public const float DefaultEyeHeight = 1.62f;
@@ -20,6 +23,8 @@ public sealed class FirstPersonCharacterController : SyncScript
     private VoxelTerrainWorldRuntime? worldRuntime;
     private float yaw;
     private float pitch;
+    private float jumpBufferTime;
+    private float groundedGraceTime;
     private bool isActiveMode;
 
     public float Radius { get; set; } = DefaultRadius;
@@ -68,9 +73,11 @@ public sealed class FirstPersonCharacterController : SyncScript
             return;
         }
 
+        float deltaTime = (float)Game.UpdateTime.Elapsed.TotalSeconds;
+        UpdateGroundingState();
         HandleLook();
-        HandleMovement();
-        ApplyMovement((float)Game.UpdateTime.Elapsed.TotalSeconds);
+        HandleMovement(deltaTime);
+        ApplyMovement(deltaTime);
         UpdateTransform();
     }
 
@@ -99,6 +106,8 @@ public sealed class FirstPersonCharacterController : SyncScript
         Entity.Transform.Position = eyePosition;
         LinearVelocity = Vector3.Zero;
         IsGrounded = false;
+        jumpBufferTime = 0f;
+        groundedGraceTime = 0f;
         UpdateTransform();
     }
 
@@ -166,8 +175,18 @@ public sealed class FirstPersonCharacterController : SyncScript
         Game.IsMouseVisible = true;
     }
 
-    private void HandleMovement()
+    private void HandleMovement(float deltaTime)
     {
+        jumpBufferTime = MathF.Max(0f, jumpBufferTime - deltaTime);
+        groundedGraceTime = IsGrounded
+            ? CoyoteTime
+            : MathF.Max(0f, groundedGraceTime - deltaTime);
+
+        if (Input.IsKeyPressed(Keys.Space))
+        {
+            jumpBufferTime = JumpInputGracePeriod;
+        }
+
         Vector3 planarInput = Vector3.Zero;
 
         if (Input.IsKeyDown(Keys.W))
@@ -200,14 +219,12 @@ public sealed class FirstPersonCharacterController : SyncScript
         velocity.X = worldMove.X * moveSpeed;
         velocity.Z = worldMove.Z * moveSpeed;
 
-        if (IsGrounded)
+        if (jumpBufferTime > 0f && groundedGraceTime > 0f)
         {
-            velocity.Y = -2f;
-            if (Input.IsKeyPressed(Keys.Space))
-            {
-                velocity.Y = JumpSpeed;
-                IsGrounded = false;
-            }
+            velocity.Y = JumpSpeed;
+            IsGrounded = false;
+            groundedGraceTime = 0f;
+            jumpBufferTime = 0f;
         }
 
         LinearVelocity = velocity;
@@ -239,11 +256,14 @@ public sealed class FirstPersonCharacterController : SyncScript
             return candidate;
         }
 
-        if (IsGrounded)
+        if (IsGrounded || groundedGraceTime > 0f)
         {
             Vector3 stepped = current + Vector3.UnitY * StepHeight + delta;
-            if (!IntersectsSolid(stepped))
+            if (!IntersectsSolid(stepped) && TryResolveGroundedEyeY(stepped, StepHeight + GroundSnapDistance, out float groundedEyeY))
             {
+                stepped.Y = groundedEyeY;
+                IsGrounded = true;
+                groundedGraceTime = CoyoteTime;
                 return stepped;
             }
         }
@@ -262,7 +282,6 @@ public sealed class FirstPersonCharacterController : SyncScript
         candidate.Y += deltaY;
         if (!IntersectsSolid(candidate))
         {
-            IsGrounded = false;
             return candidate;
         }
 
@@ -273,6 +292,7 @@ public sealed class FirstPersonCharacterController : SyncScript
             velocity.Y = 0f;
             LinearVelocity = velocity;
             IsGrounded = true;
+            groundedGraceTime = CoyoteTime;
             return current;
         }
 
@@ -284,6 +304,23 @@ public sealed class FirstPersonCharacterController : SyncScript
 
     private float ResolveGroundedEyeY(Vector3 current)
     {
+        if (!TryResolveGroundedEyeY(current, StepHeight + GroundSnapDistance, out float groundedEyeY))
+        {
+            return current.Y;
+        }
+
+        return groundedEyeY;
+    }
+
+    private bool TryResolveGroundedEyeY(Vector3 current, float maxSnapDown, out float groundedEyeY)
+    {
+        groundedEyeY = current.Y;
+
+        if (worldRuntime is null)
+        {
+            return false;
+        }
+
         float minX = current.X - Radius + SkinWidth;
         float maxX = current.X + Radius - SkinWidth;
         float minZ = current.Z - Radius + SkinWidth;
@@ -295,23 +332,78 @@ public sealed class FirstPersonCharacterController : SyncScript
         int endZ = (int)MathF.Floor(maxZ);
 
         float feetY = current.Y - EyeHeightFromFeet;
-        int sampleY = (int)MathF.Floor(feetY);
+        int topSampleY = (int)MathF.Floor(feetY);
+        int bottomSampleY = (int)MathF.Floor(feetY - maxSnapDown - SkinWidth);
         float highestTop = float.MinValue;
 
         for (int z = startZ; z <= endZ; z++)
         {
             for (int x = startX; x <= endX; x++)
             {
-                if (worldRuntime!.SampleBlockWorld(x, sampleY, z) is not BlockKind.Air and not BlockKind.Water)
+                for (int y = topSampleY; y >= bottomSampleY; y--)
                 {
-                    highestTop = MathF.Max(highestTop, sampleY + 1f);
+                    if (worldRuntime.SampleBlockWorld(x, y, z) is not BlockKind.Air and not BlockKind.Water)
+                    {
+                        highestTop = MathF.Max(highestTop, y + 1f);
+                        break;
+                    }
                 }
             }
         }
 
-        return highestTop == float.MinValue
-            ? current.Y
-            : highestTop + EyeHeightFromFeet + SkinWidth;
+        if (highestTop == float.MinValue)
+        {
+            return false;
+        }
+
+        float downwardDistance = feetY - highestTop;
+        if (downwardDistance < -SkinWidth || downwardDistance > maxSnapDown + SkinWidth)
+        {
+            return false;
+        }
+
+        groundedEyeY = highestTop + EyeHeightFromFeet + SkinWidth;
+        return true;
+    }
+
+    private void UpdateGroundingState()
+    {
+        if (worldRuntime is null)
+        {
+            IsGrounded = false;
+            return;
+        }
+
+        Vector3 position = EyePosition;
+        if (IntersectsSolid(position))
+        {
+            position.Y = ResolveGroundedEyeY(position);
+            Entity.Transform.Position = position;
+            Vector3 velocity = LinearVelocity;
+            velocity.Y = MathF.Max(velocity.Y, 0f);
+            LinearVelocity = velocity;
+            IsGrounded = true;
+            groundedGraceTime = CoyoteTime;
+            return;
+        }
+
+        if (TryResolveGroundedEyeY(position, GroundSnapDistance, out float groundedEyeY))
+        {
+            if (!MathUtil.NearEqual(position.Y, groundedEyeY))
+            {
+                position.Y = groundedEyeY;
+                Entity.Transform.Position = position;
+            }
+
+            Vector3 velocity = LinearVelocity;
+            velocity.Y = MathF.Max(velocity.Y, 0f);
+            LinearVelocity = velocity;
+            IsGrounded = true;
+            groundedGraceTime = CoyoteTime;
+            return;
+        }
+
+        IsGrounded = false;
     }
 
     private bool IntersectsSolid(Vector3 eyePosition)
