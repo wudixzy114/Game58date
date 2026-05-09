@@ -33,7 +33,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
 
         var generator = new TerrainChunkGenerator(settings, overrideStore);
         var mesher = new VoxelChunkMesher(settings);
-        var modelFactory = new VoxelChunkModelFactory(Game.GraphicsDevice, content);
+        var modelFactory = new VoxelChunkModelFactory(Game.GraphicsDevice, Game.GraphicsContext, content);
         worldRuntime = new VoxelTerrainWorldRuntime(settings, overrideStore, generator, mesher, modelFactory);
 
         cameraEntity = sceneBootstrapper.EnsureCamera(scene);

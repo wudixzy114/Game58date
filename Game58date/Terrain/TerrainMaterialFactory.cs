@@ -14,10 +14,10 @@ public sealed class TerrainMaterialFactory
     private Material? terrainMaterial;
     private Material? waterMaterial;
 
-    public TerrainMaterialFactory(GraphicsDevice graphicsDevice)
+    public TerrainMaterialFactory(GraphicsDevice graphicsDevice, GraphicsContext graphicsContext)
     {
         this.graphicsDevice = graphicsDevice;
-        atlasFactory = new TerrainTextureAtlasFactory(graphicsDevice);
+        atlasFactory = new TerrainTextureAtlasFactory(graphicsDevice, graphicsContext);
     }
 
     public Material GetOrCreateTerrainMaterial()
@@ -34,9 +34,14 @@ public sealed class TerrainMaterialFactory
 
     private Material BuildTerrainMaterial()
     {
+        var terrainTexture = new ComputeTextureColor(atlasFactory.GetOrCreate())
+        {
+            Filtering = TextureFilter.Anisotropic,
+        };
+
         var descriptor = new MaterialDescriptor();
         descriptor.Attributes.Diffuse = new MaterialDiffuseMapFeature(
-            new ComputeTextureColor(atlasFactory.GetOrCreate()));
+            terrainTexture);
         descriptor.Attributes.DiffuseModel = new MaterialDiffuseLambertModelFeature();
         descriptor.Attributes.Emissive = new MaterialEmissiveMapFeature(
             new ComputeColor(new Color4(0.05f, 0.045f, 0.04f, 1f)))

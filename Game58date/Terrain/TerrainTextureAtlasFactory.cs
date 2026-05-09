@@ -11,11 +11,13 @@ public sealed class TerrainTextureAtlasFactory
     private const int TileCount = 6;
 
     private readonly GraphicsDevice graphicsDevice;
+    private readonly GraphicsContext graphicsContext;
     private Texture? atlas;
 
-    public TerrainTextureAtlasFactory(GraphicsDevice graphicsDevice)
+    public TerrainTextureAtlasFactory(GraphicsDevice graphicsDevice, GraphicsContext graphicsContext)
     {
         this.graphicsDevice = graphicsDevice;
+        this.graphicsContext = graphicsContext;
     }
 
     public Texture GetOrCreate()
@@ -37,15 +39,85 @@ public sealed class TerrainTextureAtlasFactory
         FillTile(pixels, width, 4, new Color(194, 176, 122), new Color(226, 211, 154), false);
         FillTile(pixels, width, 5, new Color(84, 92, 82), new Color(120, 128, 118), true);
 
-        return Texture.New2D(
+        Color[][] mipChain = BuildMipChain(width, height, pixels);
+        Texture texture = Texture.New2D(
             graphicsDevice,
             width,
             height,
+            true,
             PixelFormat.R8G8B8A8_UNorm,
-            pixels,
             TextureFlags.ShaderResource,
-            GraphicsResourceUsage.Immutable,
+            1,
+            GraphicsResourceUsage.Default,
             TextureOptions.None);
+
+        for (int mipLevel = 0; mipLevel < mipChain.Length; mipLevel++)
+        {
+            texture.SetData(graphicsContext.CommandList, mipChain[mipLevel], 0, mipLevel, null);
+        }
+
+        return texture;
+    }
+
+    private static Color[][] BuildMipChain(int width, int height, Color[] basePixels)
+    {
+        int mipCount = Texture.CalculateMipLevels(width, height, true);
+        var mipPixels = new Color[mipCount][];
+        mipPixels[0] = basePixels;
+
+        int currentWidth = width;
+        int currentHeight = height;
+        Color[] currentLevel = basePixels;
+
+        for (int mipLevel = 1; mipLevel < mipCount; mipLevel++)
+        {
+            int nextWidth = Math.Max(1, currentWidth / 2);
+            int nextHeight = Math.Max(1, currentHeight / 2);
+            var nextLevel = new Color[nextWidth * nextHeight];
+
+            for (int y = 0; y < nextHeight; y++)
+            {
+                for (int x = 0; x < nextWidth; x++)
+                {
+                    nextLevel[y * nextWidth + x] = AverageBlock(currentLevel, currentWidth, currentHeight, x * 2, y * 2);
+                }
+            }
+
+            mipPixels[mipLevel] = nextLevel;
+            currentLevel = nextLevel;
+            currentWidth = nextWidth;
+            currentHeight = nextHeight;
+        }
+
+        return mipPixels;
+    }
+
+    private static Color AverageBlock(Color[] pixels, int width, int height, int startX, int startY)
+    {
+        int sampleCount = 0;
+        int r = 0;
+        int g = 0;
+        int b = 0;
+
+        for (int dy = 0; dy < 2; dy++)
+        {
+            int y = Math.Min(startY + dy, height - 1);
+            for (int dx = 0; dx < 2; dx++)
+            {
+                int x = Math.Min(startX + dx, width - 1);
+                Color color = pixels[y * width + x];
+                r += color.R;
+                g += color.G;
+                b += color.B;
+                sampleCount++;
+            }
+        }
+
+        return new Color(
+            (byte)(r / sampleCount),
+            (byte)(g / sampleCount),
+            (byte)(b / sampleCount),
+            255);
     }
 
     private static void FillTile(Color[] pixels, int atlasWidth, int tileIndex, Color dark, Color light, bool rockPattern)

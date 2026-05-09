@@ -14,10 +14,10 @@ public sealed class VoxelChunkModelFactory
     private readonly GraphicsDevice graphicsDevice;
     private readonly TerrainMaterialFactory materialFactory;
 
-    public VoxelChunkModelFactory(GraphicsDevice graphicsDevice, IContentManager content)
+    public VoxelChunkModelFactory(GraphicsDevice graphicsDevice, GraphicsContext graphicsContext, IContentManager content)
     {
         this.graphicsDevice = graphicsDevice;
-        materialFactory = new TerrainMaterialFactory(graphicsDevice);
+        materialFactory = new TerrainMaterialFactory(graphicsDevice, graphicsContext);
     }
 
     public void AttachModels(Entity rootEntity, VoxelChunkMeshData meshData)
