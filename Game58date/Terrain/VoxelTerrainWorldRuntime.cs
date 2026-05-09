@@ -36,6 +36,10 @@ public sealed class VoxelTerrainWorldRuntime
         Stats = new TerrainRuntimeStats();
     }
 
+    public TerrainGenerationSettings Settings => settings;
+
+    public VoxelChunkOverrideStore OverrideStore => overrideStore;
+
     public TerrainRuntimeStats Stats { get; }
 
     public void WarmupSpawnArea(Scene scene, Vector3 worldPosition, int radiusInChunks)

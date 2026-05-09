@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Game58date.Save;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
 using Stride.Engine;
@@ -9,16 +10,23 @@ namespace Game58date.Terrain;
 
 public sealed class VoxelTerrainRuntimeScript : SyncScript
 {
-    private readonly TerrainGenerationSettings settings = new();
     private readonly TerrainSceneBootstrapper sceneBootstrapper = new();
     private readonly VoxelChunkOverrideStore overrideStore = new();
+    private readonly GameSaveRepository saveRepository = new();
 
+    private TerrainGenerationSettings settings = new();
     private VoxelTerrainWorldRuntime? worldRuntime;
     private Entity? cameraEntity;
     private FirstPersonCharacterController? firstPersonController;
     private Scene? scene;
     private Simulation? simulation;
     private Quaternion spawnRotation = Quaternion.Identity;
+    private GameSaveData? activeSaveData;
+    private TerrainRuntimeStartupOptions startupOptions = new();
+    private float autosaveCountdown;
+    private int lastSavedOverrideRevision = -1;
+    private Vector3 lastSavedEyePosition;
+    private Quaternion lastSavedRotation = Quaternion.Identity;
 
     public override void Start()
     {
@@ -31,6 +39,12 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         scene = Entity.Scene ?? throw new InvalidOperationException("Terrain runtime requires an active scene.");
         simulation = Services.GetService<Simulation>();
 
+        startupOptions = TerrainRuntimeStartupOptions.FromEnvironment(settings);
+        activeSaveData = saveRepository.LoadOrCreate(startupOptions.SaveSlotName, startupOptions.PreferredSeed);
+        settings = settings.WithSeed(activeSaveData.World.Seed ?? startupOptions.PreferredSeed);
+        overrideStore.ReplaceAll(VoxelChunkOverrideSaveMapper.BuildOverrideSnapshot(activeSaveData.Terrain, settings));
+        autosaveCountdown = startupOptions.AutosaveIntervalSeconds;
+
         var generator = new TerrainChunkGenerator(settings, overrideStore);
         var mesher = new VoxelChunkMesher(settings);
         var modelFactory = new VoxelChunkModelFactory(Game.GraphicsDevice, Game.GraphicsContext, content);
@@ -42,7 +56,16 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         sceneBootstrapper.PruneLegacySceneEntities(scene);
 
         Vector3 desiredSpawnPosition = cameraEntity.Transform.Position;
+        if (activeSaveData.Player.EyePosition is { } savedEyePosition && savedEyePosition.IsFinite)
+        {
+            desiredSpawnPosition = savedEyePosition.ToStrideVector3();
+        }
+
         spawnRotation = cameraEntity.Transform.Rotation;
+        if (activeSaveData.Player.Rotation is { } savedRotation && savedRotation.IsFiniteAndNonZero)
+        {
+            spawnRotation = Quaternion.Normalize(savedRotation.ToStrideQuaternion());
+        }
 
         worldRuntime.WarmupSpawnArea(scene, desiredSpawnPosition, radiusInChunks: 1);
         Vector3 spawnEyePosition = ResolveSpawnEyePosition(desiredSpawnPosition, "startup");
@@ -51,6 +74,8 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
 
         firstPersonController.MatchPose(spawnEyePosition, spawnRotation);
         firstPersonController.SetActiveMode(true);
+        CacheLastSavedPose(spawnEyePosition, spawnRotation);
+        SaveRuntimeState(force: true, reason: "startup-sync");
     }
 
     public override void Update()
@@ -61,10 +86,12 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         }
 
         worldRuntime.RefreshVisibleChunks(scene, firstPersonController.EyePosition, force: false);
+        UpdateAutosave(firstPersonController);
     }
 
     public override void Cancel()
     {
+        SaveRuntimeState(force: true, reason: "shutdown");
         firstPersonController?.SetActiveMode(false);
         base.Cancel();
     }
@@ -99,5 +126,77 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         string message = $"Spawn[{context}] desired=({desiredEyePosition.X:F2},{desiredEyePosition.Y:F2},{desiredEyePosition.Z:F2}) candidate=({candidate.X:F2},{candidate.Y:F2},{candidate.Z:F2}) final=({final.X:F2},{final.Y:F2},{final.Z:F2}) {rayInfo}";
         TerrainRuntimeLogger.Logger.Info(message);
         return final;
+    }
+
+    private void UpdateAutosave(FirstPersonCharacterController controller)
+    {
+        if (!startupOptions.AutosaveEnabled)
+        {
+            return;
+        }
+
+        float deltaTime = (float)Game.UpdateTime.Elapsed.TotalSeconds;
+        autosaveCountdown -= deltaTime;
+        if (autosaveCountdown > 0f)
+        {
+            return;
+        }
+
+        autosaveCountdown = startupOptions.AutosaveIntervalSeconds;
+        SaveRuntimeState(force: false, reason: "autosave", controller);
+    }
+
+    private void SaveRuntimeState(bool force, string reason, FirstPersonCharacterController? controllerOverride = null)
+    {
+        if (activeSaveData is null || worldRuntime is null || firstPersonController is null && controllerOverride is null)
+        {
+            return;
+        }
+
+        FirstPersonCharacterController controller = controllerOverride ?? firstPersonController!;
+        Vector3 currentEyePosition = controller.EyePosition;
+        Quaternion currentRotation = controller.Entity.Transform.Rotation;
+        int currentOverrideRevision = overrideStore.Revision;
+
+        bool poseChanged = !NearlyEqual(lastSavedEyePosition, currentEyePosition) || !NearlyEqual(lastSavedRotation, currentRotation);
+        bool overridesChanged = lastSavedOverrideRevision != currentOverrideRevision;
+        if (!force && !poseChanged && !overridesChanged)
+        {
+            return;
+        }
+
+        activeSaveData.World.Seed = settings.Seed;
+        activeSaveData.Player.EyePosition = SerializableVector3.FromStride(currentEyePosition);
+        activeSaveData.Player.Rotation = SerializableQuaternion.FromStride(currentRotation);
+        activeSaveData.Terrain = VoxelChunkOverrideSaveMapper.CreateTerrainSaveData(settings, overrideStore);
+
+        if (!saveRepository.Save(activeSaveData))
+        {
+            return;
+        }
+
+        CacheLastSavedPose(currentEyePosition, currentRotation);
+        lastSavedOverrideRevision = currentOverrideRevision;
+        TerrainRuntimeLogger.Logger.Info(
+            $"Saved runtime state reason={reason} slot={activeSaveData.SlotName} seed={settings.Seed} overrides={overrideStore.GetTotalOverrideCount()} eye=({currentEyePosition.X:F2},{currentEyePosition.Y:F2},{currentEyePosition.Z:F2}).");
+    }
+
+    private void CacheLastSavedPose(Vector3 eyePosition, Quaternion rotation)
+    {
+        lastSavedEyePosition = eyePosition;
+        lastSavedRotation = Quaternion.Normalize(rotation);
+    }
+
+    private static bool NearlyEqual(Vector3 left, Vector3 right)
+    {
+        return Vector3.DistanceSquared(left, right) <= 0.0004f;
+    }
+
+    private static bool NearlyEqual(Quaternion left, Quaternion right)
+    {
+        Quaternion normalizedLeft = Quaternion.Normalize(left);
+        Quaternion normalizedRight = Quaternion.Normalize(right);
+        float dot = MathF.Abs(Quaternion.Dot(normalizedLeft, normalizedRight));
+        return dot >= 0.9999f;
     }
 }

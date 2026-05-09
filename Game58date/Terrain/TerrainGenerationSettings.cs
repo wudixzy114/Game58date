@@ -2,6 +2,8 @@ namespace Game58date.Terrain;
 
 public sealed class TerrainGenerationSettings
 {
+    public const int DefaultSeed = 580013;
+
     public int ChunkSize { get; init; } = 24;
 
     public int ChunkHeight { get; init; } = 96;
@@ -10,7 +12,7 @@ public sealed class TerrainGenerationSettings
 
     public float VoxelScale { get; init; } = 1.0f;
 
-    public int Seed { get; init; } = 580013;
+    public int Seed { get; init; } = DefaultSeed;
 
     public float BaseHeight { get; init; } = 18f;
 
@@ -41,4 +43,31 @@ public sealed class TerrainGenerationSettings
     public int MaxConcurrentChunkBuilds { get; init; } = 2;
 
     public int MaxChunkUploadsPerFrame { get; init; } = 2;
+
+    public TerrainGenerationSettings WithSeed(int seed)
+    {
+        return new TerrainGenerationSettings
+        {
+            ChunkSize = ChunkSize,
+            ChunkHeight = ChunkHeight,
+            ViewDistanceInChunks = ViewDistanceInChunks,
+            VoxelScale = VoxelScale,
+            Seed = seed,
+            BaseHeight = BaseHeight,
+            HeightAmplitude = HeightAmplitude,
+            MountainAmplitude = MountainAmplitude,
+            WaterLevel = WaterLevel,
+            DomainWarpFrequency = DomainWarpFrequency,
+            DomainWarpAmplitude = DomainWarpAmplitude,
+            OverhangStrength = OverhangStrength,
+            SurfaceBandHeight = SurfaceBandHeight,
+            SteepSlopeThreshold = SteepSlopeThreshold,
+            MinimumSurfaceThickness = MinimumSurfaceThickness,
+            CaveCeilingFadeDepth = CaveCeilingFadeDepth,
+            CaveCarvingStrength = CaveCarvingStrength,
+            CaveThreshold = CaveThreshold,
+            MaxConcurrentChunkBuilds = MaxConcurrentChunkBuilds,
+            MaxChunkUploadsPerFrame = MaxChunkUploadsPerFrame,
+        };
+    }
 }
