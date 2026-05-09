@@ -156,6 +156,8 @@ public sealed class GameSaveRepository
         saveData.Gameplay.Intent.RecentIntents ??= new List<PlayerIntentRecordSaveData>();
         saveData.Gameplay.Narrative ??= new HeroJourneySaveData();
         saveData.Gameplay.Narrative.StageHistory ??= new List<HeroJourneyStageRecordSaveData>();
+        saveData.Gameplay.Omen ??= new OmenSaveData();
+        saveData.Gameplay.Omen.History ??= new List<OmenRecordSaveData>();
     }
 
     private static void BackupCorruptSave(string slotPath)

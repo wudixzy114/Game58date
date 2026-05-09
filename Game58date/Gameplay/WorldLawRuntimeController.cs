@@ -33,6 +33,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     private bool textInputEnabled;
     private PlayerIntentSystem? intentSystem;
     private HeroJourneyDirector? heroJourneyDirector;
+    private OmenDirector? omenDirector;
 
     public WorldLawEngine? Engine { get; private set; }
 
@@ -52,10 +53,12 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         Engine = new WorldLawEngine(initialState.Clone());
         intentSystem = new PlayerIntentSystem(Engine.State.Intent);
         heroJourneyDirector = new HeroJourneyDirector(Engine.State.Narrative);
+        omenDirector = new OmenDirector(Engine.State.Omen);
         Engine.LogGenerated += HandleLogGenerated;
         Engine.HeroStageAdvanced += HandleHeroStageAdvanced;
         Engine.OmenTriggered += HandleOmenTriggered;
         heroJourneyDirector.StageAdvanced += HandleNarrativeStageAdvanced;
+        omenDirector.OmenActivated += HandleOmenActivated;
     }
 
     public override void Start()
@@ -86,6 +89,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         HandleHotkeys();
         TrackExplorationProgress();
         Engine.Tick(deltaTime);
+        SyncOmenState(deltaTime);
         SyncNarrativeState();
         UpdateLighting();
         DrawHud();
@@ -105,6 +109,11 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         if (heroJourneyDirector is not null)
         {
             heroJourneyDirector.StageAdvanced -= HandleNarrativeStageAdvanced;
+        }
+
+        if (omenDirector is not null)
+        {
+            omenDirector.OmenActivated -= HandleOmenActivated;
         }
 
         base.Cancel();
@@ -241,7 +250,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         WorldLawRuntimeState state = Engine.State;
         float worldTime = state.WorldTimeSeconds;
         float baseWave = 0.88f + MathF.Sin(worldTime * 0.8f) * 0.12f;
-        float omenBoost = state.World.LastOmen switch
+        OmenType activeOmenType = state.Omen.ActiveOmen?.OmenType ?? state.World.LastOmen;
+        float omenBoost = activeOmenType switch
         {
             OmenType.PathRevelation => 4.5f,
             OmenType.GuideArrival => 2.2f,
@@ -265,7 +275,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             _ => baseLightColor,
         };
 
-        float blend = MathUtil.Clamp(state.World.Atmosphere * 0.55f + state.World.PathVisibility * 0.45f, 0f, 1f);
+        float omenBlendBoost = state.Omen.ActiveOmen is null ? 0f : state.Omen.ActiveOmen.Score * 0.15f;
+        float blend = MathUtil.Clamp(state.World.Atmosphere * 0.55f + state.World.PathVisibility * 0.45f + omenBlendBoost, 0f, 1f);
         lightComponent.SetColor(LerpColor(baseLightColor, stageColor, blend));
     }
 
@@ -291,7 +302,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             new Int2(20, 96),
             HudTextColor);
         debugText.Print(
-            $"Omens      {WorldLawEngine.GetOmenTitle(state.World.LastOmen)}  path {AsPct(state.World.PathVisibility)}  social {AsPct(state.World.SocialFlux)}  mood {AsPct(state.World.Atmosphere)}",
+            $"Omens      {WorldLawEngine.GetOmenTitle(state.Omen.ActiveOmen?.OmenType ?? state.World.LastOmen)}  score {AsPct(state.Omen.LastScore)}  path {AsPct(state.World.PathVisibility)}  social {AsPct(state.World.SocialFlux)}",
             new Int2(20, 120),
             HudTextColor);
         debugText.Print(
@@ -299,17 +310,21 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             new Int2(20, 144),
             HudTextColor);
         debugText.Print(
-            $"Counts     actions {state.Behavior.RecordedActions}  intents {state.Behavior.IntentActions}  peace {state.Behavior.PeacefulActions}  violent {state.Behavior.ViolentActions}  losses {state.Behavior.LossEvents}",
+            $"Omen src    {GetOmenSourceTitle(state.Omen.LastSource)}  mood {AsPct(state.World.Atmosphere)}  active {(state.Omen.ActiveOmen is null ? "no" : "yes")}",
             new Int2(20, 168),
             HudTextColor);
         debugText.Print(
-            $"Intent     {GetIntentTopicTitle(state.Intent.LastIntent?.Topic ?? IntentTopic.Unknown)}  conf {(state.Intent.LastIntent?.Confidence ?? 0f) * 100f:0}%  total {state.Intent.SubmittedIntentCount}",
+            $"Counts     actions {state.Behavior.RecordedActions}  intents {state.Behavior.IntentActions}  peace {state.Behavior.PeacefulActions}  violent {state.Behavior.ViolentActions}  losses {state.Behavior.LossEvents}",
             new Int2(20, 192),
             HudTextColor);
-        debugText.Print("Tab input toggle  Enter submit  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor  F1 HUD", new Int2(20, 220), HudHintColor);
-        debugText.Print($"> {intentBuffer}", new Int2(20, 244), textInputEnabled ? HudInputColor : HudDisabledColor);
+        debugText.Print(
+            $"Intent     {GetIntentTopicTitle(state.Intent.LastIntent?.Topic ?? IntentTopic.Unknown)}  conf {(state.Intent.LastIntent?.Confidence ?? 0f) * 100f:0}%  total {state.Intent.SubmittedIntentCount}",
+            new Int2(20, 216),
+            HudTextColor);
+        debugText.Print("Tab input toggle  Enter submit  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor  F1 HUD", new Int2(20, 244), HudHintColor);
+        debugText.Print($"> {intentBuffer}", new Int2(20, 268), textInputEnabled ? HudInputColor : HudDisabledColor);
 
-        int line = 280;
+        int line = 304;
         foreach (string entry in eventLog)
         {
             debugText.Print(entry, new Int2(20, line), HudLogColor);
@@ -329,6 +344,40 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
     private void HandleOmenTriggered(OmenType _, string __)
     {
+        UpdateLighting();
+    }
+
+    private void HandleOmenActivated(OmenRecord omenRecord)
+    {
+        if (Engine is null)
+        {
+            return;
+        }
+
+        Engine.State.World.LastOmen = omenRecord.OmenType;
+        Engine.State.World.LastOmenDescription = omenRecord.Description;
+        Engine.State.World.OmenCount++;
+
+        switch (omenRecord.OmenType)
+        {
+            case OmenType.PathRevelation:
+                Engine.State.World.PathVisibility = MathUtil.Clamp(Engine.State.World.PathVisibility + 0.18f, 0f, 1f);
+                break;
+            case OmenType.GuideArrival:
+                Engine.State.World.Faith = MathUtil.Clamp(Engine.State.World.Faith + 0.10f, 0f, 1f);
+                break;
+            case OmenType.NaturalAnomaly:
+                Engine.State.World.Atmosphere = MathUtil.Clamp(Engine.State.World.Atmosphere + 0.16f, 0f, 1f);
+                break;
+            case OmenType.SocialShift:
+                Engine.State.World.SocialFlux = MathUtil.Clamp(Engine.State.World.SocialFlux + 0.12f, 0f, 1f);
+                break;
+            case OmenType.Divination:
+                Engine.State.World.Curiosity = MathUtil.Clamp(Engine.State.World.Curiosity + 0.10f, 0f, 1f);
+                break;
+        }
+
+        PushLog($"Omen[{GetOmenSourceTitle(omenRecord.Source)}]: {omenRecord.Description}");
         UpdateLighting();
     }
 
@@ -407,8 +456,27 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             Engine.State.World.TargetBiome = record.SuggestedTargetBiome;
         }
 
+        omenDirector?.NotifyIntent(record, Engine.State);
         Engine.SubmitIntent(record.RawText);
         SyncNarrativeState();
+    }
+
+    private void SyncOmenState(float deltaTime)
+    {
+        if (Engine is null || omenDirector is null)
+        {
+            return;
+        }
+
+        omenDirector.Tick(deltaTime, Engine.State);
+        CausalityRecord? latestCausality = Engine.State.RecentCausality.Count > 0
+            ? Engine.State.RecentCausality[^1]
+            : null;
+
+        if (latestCausality is not null && latestCausality.TimestampUtc >= DateTimeOffset.UtcNow.AddSeconds(-1))
+        {
+            omenDirector.NotifyCausality(latestCausality, Engine.State);
+        }
     }
 
     private void SyncNarrativeState()
@@ -418,8 +486,13 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             return;
         }
 
+        HeroJourneyStage previousStage = Engine.State.Narrative.CurrentStage;
         heroJourneyDirector.Evaluate(Engine.State);
         Engine.State.HeroStage = Engine.State.Narrative.CurrentStage;
+        if (Engine.State.Narrative.CurrentStage != previousStage)
+        {
+            omenDirector?.NotifyNarrative(Engine.State.Narrative.CurrentStage, Engine.State.Narrative.LastStageReason, Engine.State);
+        }
     }
 
     private static string AsPct(float value)
@@ -446,6 +519,18 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
             IntentTopic.Compassion => "Compassion",
             IntentTopic.Domination => "Domination",
             _ => "Unknown",
+        };
+    }
+
+    private static string GetOmenSourceTitle(OmenSource source)
+    {
+        return source switch
+        {
+            OmenSource.Intent => "Intent",
+            OmenSource.EmergentWorldLaw => "World",
+            OmenSource.Causality => "Causality",
+            OmenSource.Narrative => "Narrative",
+            _ => "None",
         };
     }
 }

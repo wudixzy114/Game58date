@@ -133,6 +133,8 @@ public sealed class WorldLawRuntimeState
 
     public HeroJourneyRuntimeState Narrative { get; set; } = new();
 
+    public OmenRuntimeState Omen { get; set; } = new();
+
     public WorldLawRuntimeState Clone()
     {
         return new WorldLawRuntimeState
@@ -188,6 +190,7 @@ public sealed class WorldLawRuntimeState
                 .ToList(),
             Intent = Intent.Clone(),
             Narrative = Narrative.Clone(),
+            Omen = Omen.Clone(),
         };
     }
 }
@@ -295,4 +298,72 @@ public sealed class HeroJourneyStageRecord
     public DateTimeOffset TimestampUtc { get; set; }
 
     public string Reason { get; set; } = string.Empty;
+}
+
+public enum OmenSource
+{
+    None = 0,
+    Intent = 1,
+    EmergentWorldLaw = 2,
+    Causality = 3,
+    Narrative = 4,
+}
+
+public sealed class OmenRecord
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    public OmenType OmenType { get; set; }
+
+    public OmenSource Source { get; set; }
+
+    public float Score { get; set; }
+
+    public string Description { get; set; } = string.Empty;
+}
+
+public sealed class OmenRuntimeState
+{
+    public float CooldownSeconds { get; set; }
+
+    public float VisualSeconds { get; set; }
+
+    public float LastScore { get; set; }
+
+    public OmenSource LastSource { get; set; }
+
+    public OmenRecord? ActiveOmen { get; set; }
+
+    public List<OmenRecord> History { get; set; } = new();
+
+    public OmenRuntimeState Clone()
+    {
+        return new OmenRuntimeState
+        {
+            CooldownSeconds = CooldownSeconds,
+            VisualSeconds = VisualSeconds,
+            LastScore = LastScore,
+            LastSource = LastSource,
+            ActiveOmen = ActiveOmen is null
+                ? null
+                : new OmenRecord
+                {
+                    TimestampUtc = ActiveOmen.TimestampUtc,
+                    OmenType = ActiveOmen.OmenType,
+                    Source = ActiveOmen.Source,
+                    Score = ActiveOmen.Score,
+                    Description = ActiveOmen.Description,
+                },
+            History = History
+                .Select(omen => new OmenRecord
+                {
+                    TimestampUtc = omen.TimestampUtc,
+                    OmenType = omen.OmenType,
+                    Source = omen.Source,
+                    Score = omen.Score,
+                    Description = omen.Description,
+                })
+                .ToList(),
+        };
+    }
 }

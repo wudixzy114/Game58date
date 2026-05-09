@@ -73,6 +73,8 @@ public sealed class GameplaySaveData
     public PlayerIntentSaveData Intent { get; set; } = new();
 
     public HeroJourneySaveData Narrative { get; set; } = new();
+
+    public OmenSaveData Omen { get; set; } = new();
 }
 
 public sealed class ChunkOverrideSaveData
@@ -229,6 +231,34 @@ public sealed class HeroJourneyStageRecordSaveData
     public DateTimeOffset TimestampUtc { get; set; }
 
     public string Reason { get; set; } = string.Empty;
+}
+
+public sealed class OmenSaveData
+{
+    public float CooldownSeconds { get; set; }
+
+    public float VisualSeconds { get; set; }
+
+    public float LastScore { get; set; }
+
+    public OmenSource LastSource { get; set; }
+
+    public OmenRecordSaveData? ActiveOmen { get; set; }
+
+    public List<OmenRecordSaveData> History { get; set; } = new();
+}
+
+public sealed class OmenRecordSaveData
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    public OmenType OmenType { get; set; }
+
+    public OmenSource Source { get; set; }
+
+    public float Score { get; set; }
+
+    public string Description { get; set; } = string.Empty;
 }
 
 public sealed class SerializableVector3

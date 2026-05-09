@@ -109,6 +109,33 @@ public static class WorldLawSaveMapper
                     })
                     .ToList(),
             },
+            Omen = new OmenRuntimeState
+            {
+                CooldownSeconds = gameplaySaveData.Omen.CooldownSeconds,
+                VisualSeconds = gameplaySaveData.Omen.VisualSeconds,
+                LastScore = gameplaySaveData.Omen.LastScore,
+                LastSource = gameplaySaveData.Omen.LastSource,
+                ActiveOmen = gameplaySaveData.Omen.ActiveOmen is null
+                    ? null
+                    : new OmenRecord
+                    {
+                        TimestampUtc = gameplaySaveData.Omen.ActiveOmen.TimestampUtc,
+                        OmenType = gameplaySaveData.Omen.ActiveOmen.OmenType,
+                        Source = gameplaySaveData.Omen.ActiveOmen.Source,
+                        Score = gameplaySaveData.Omen.ActiveOmen.Score,
+                        Description = gameplaySaveData.Omen.ActiveOmen.Description,
+                    },
+                History = gameplaySaveData.Omen.History
+                    .Select(omen => new OmenRecord
+                    {
+                        TimestampUtc = omen.TimestampUtc,
+                        OmenType = omen.OmenType,
+                        Source = omen.Source,
+                        Score = omen.Score,
+                        Description = omen.Description,
+                    })
+                    .ToList(),
+            },
         };
 
         ClampRuntimeState(runtimeState);
@@ -214,6 +241,33 @@ public static class WorldLawSaveMapper
                     })
                     .ToList(),
             },
+            Omen = new OmenSaveData
+            {
+                CooldownSeconds = runtimeState.Omen.CooldownSeconds,
+                VisualSeconds = runtimeState.Omen.VisualSeconds,
+                LastScore = runtimeState.Omen.LastScore,
+                LastSource = runtimeState.Omen.LastSource,
+                ActiveOmen = runtimeState.Omen.ActiveOmen is null
+                    ? null
+                    : new OmenRecordSaveData
+                    {
+                        TimestampUtc = runtimeState.Omen.ActiveOmen.TimestampUtc,
+                        OmenType = runtimeState.Omen.ActiveOmen.OmenType,
+                        Source = runtimeState.Omen.ActiveOmen.Source,
+                        Score = runtimeState.Omen.ActiveOmen.Score,
+                        Description = runtimeState.Omen.ActiveOmen.Description,
+                    },
+                History = runtimeState.Omen.History
+                    .Select(omen => new OmenRecordSaveData
+                    {
+                        TimestampUtc = omen.TimestampUtc,
+                        OmenType = omen.OmenType,
+                        Source = omen.Source,
+                        Score = omen.Score,
+                        Description = omen.Description,
+                    })
+                    .ToList(),
+            },
         };
     }
 
@@ -248,6 +302,8 @@ public static class WorldLawSaveMapper
 
         runtimeState.Narrative ??= new HeroJourneyRuntimeState();
         runtimeState.Narrative.StageHistory ??= new List<HeroJourneyStageRecord>();
+        runtimeState.Omen ??= new OmenRuntimeState();
+        runtimeState.Omen.History ??= new List<OmenRecord>();
     }
 
     private static float Clamp01(float value)
