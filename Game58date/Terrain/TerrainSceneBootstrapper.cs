@@ -2,11 +2,17 @@
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Rendering.Lights;
+using Stride.Physics;
 
 namespace Game58date.Terrain;
 
 public sealed class TerrainSceneBootstrapper
 {
+    public const float PlayerCapsuleRadius = 0.45f;
+    public const float PlayerCapsuleLength = 1.0f;
+    public const float PlayerHalfHeight = PlayerCapsuleRadius + PlayerCapsuleLength * 0.5f;
+    public const float PlayerEyeHeightFromCenter = 0.67f;
+
     public Entity EnsureCamera(Scene scene)
     {
         foreach (Entity entity in scene.Entities)
@@ -29,6 +35,47 @@ public sealed class TerrainSceneBootstrapper
 
         scene.Entities.Add(cameraEntity);
         return cameraEntity;
+    }
+
+    public Entity EnsureFirstPersonPlayer(Scene scene, Vector3 spawnPosition, Entity cameraEntity)
+    {
+        foreach (Entity entity in scene.Entities)
+        {
+            if (entity.Name == "FirstPersonPlayer")
+            {
+                FirstPersonCharacterController? existingController = entity.Get<FirstPersonCharacterController>();
+                if (existingController is not null)
+                {
+                    existingController.CameraEntity = cameraEntity;
+                }
+
+                return entity;
+            }
+        }
+
+        var playerEntity = new Entity("FirstPersonPlayer");
+        playerEntity.Transform.Position = spawnPosition;
+
+        var character = new CharacterComponent
+        {
+            ColliderShape = new CapsuleColliderShape(false, PlayerCapsuleRadius, PlayerCapsuleLength, ShapeOrientation.UpY),
+            StepHeight = 0.45f,
+            JumpSpeed = 7.2f,
+            MaxSlope = new AngleSingle(47f, AngleType.Degree),
+            FallSpeed = 45f,
+            Gravity = new Vector3(0f, -24f, 0f),
+        };
+
+        var controller = new FirstPersonCharacterController
+        {
+            CameraEntity = cameraEntity,
+            EyeHeight = PlayerEyeHeightFromCenter,
+        };
+
+        playerEntity.Add(character);
+        playerEntity.Add(controller);
+        scene.Entities.Add(playerEntity);
+        return playerEntity;
     }
 
     public void EnsureTerrainLighting(Scene scene)

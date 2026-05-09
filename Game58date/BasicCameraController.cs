@@ -24,6 +24,8 @@ public class BasicCameraController : SyncScript
 
     public bool Gamepad { get; set; } = false;
 
+    public bool IsControlEnabled { get; set; } = true;
+
     public Vector3 KeyboardMovementSpeed { get; set; } = new Vector3(5.0f);
 
     public Vector3 TouchMovementSpeed { get; set; } = new Vector3(0.7f, 0.7f, 0.3f);
@@ -53,6 +55,17 @@ public class BasicCameraController : SyncScript
 
     public override void Update()
     {
+        if (!IsControlEnabled)
+        {
+            if (Input.HasMouse)
+            {
+                Input.UnlockMousePosition();
+            }
+
+            Game.IsMouseVisible = true;
+            return;
+        }
+
         ProcessInput();
         UpdateTransform();
     }

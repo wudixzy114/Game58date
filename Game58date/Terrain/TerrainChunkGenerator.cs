@@ -1,3 +1,6 @@
+#nullable enable
+using System.Collections.Generic;
+
 namespace Game58date.Terrain;
 
 public sealed class TerrainChunkGenerator
@@ -5,10 +8,12 @@ public sealed class TerrainChunkGenerator
     private readonly TerrainGenerationSettings settings;
     private readonly WorldFieldSampler sampler;
     private readonly SurfaceMaterialResolver surfaceMaterialResolver;
+    private readonly VoxelChunkOverrideStore overrideStore;
 
-    public TerrainChunkGenerator(TerrainGenerationSettings settings)
+    public TerrainChunkGenerator(TerrainGenerationSettings settings, VoxelChunkOverrideStore overrideStore)
     {
         this.settings = settings;
+        this.overrideStore = overrideStore;
         sampler = new WorldFieldSampler(settings);
         surfaceMaterialResolver = new SurfaceMaterialResolver(settings);
     }
@@ -29,6 +34,8 @@ public sealed class TerrainChunkGenerator
                 FillColumn(chunk, localX, localZ, worldX, worldZ, sample);
             }
         }
+
+        ApplyOverrides(chunk);
 
         return chunk;
     }
@@ -96,6 +103,23 @@ public sealed class TerrainChunkGenerator
                 }
 
                 return BlockKind.Stone;
+        }
+    }
+
+    private void ApplyOverrides(VoxelChunkData chunk)
+    {
+        if (!overrideStore.TryGetChunkOverrides(chunk.Coordinate, out IReadOnlyDictionary<int, BlockKind>? chunkOverrides) || chunkOverrides is null)
+        {
+            return;
+        }
+
+        foreach ((int index, BlockKind block) in chunkOverrides)
+        {
+            int y = index / (chunk.Size * chunk.Size);
+            int remainder = index - y * chunk.Size * chunk.Size;
+            int z = remainder / chunk.Size;
+            int x = remainder - z * chunk.Size;
+            chunk.SetBlock(x, y, z, block);
         }
     }
 }

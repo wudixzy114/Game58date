@@ -5,6 +5,7 @@ using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
 using Stride.Engine;
+using Stride.Physics;
 
 namespace Game58date.Terrain;
 
@@ -33,6 +34,46 @@ public sealed class VoxelChunkModelFactory
             waterEntity.Add(new ModelComponent(CreateModel(meshData.Water, materialFactory.GetOrCreateWaterMaterial())));
             rootEntity.AddChild(waterEntity);
         }
+    }
+
+    public void AttachCollision(Entity rootEntity, VoxelChunkCollisionData collisionData)
+    {
+        if (collisionData.IsEmpty)
+        {
+            return;
+        }
+
+        Vector3 min = new(float.MaxValue);
+        Vector3 max = new(float.MinValue);
+        foreach (VoxelCollisionBox box in collisionData.Boxes)
+        {
+            Vector3 half = box.Size * 0.5f;
+            min = Vector3.Min(min, box.Center - half);
+            max = Vector3.Max(max, box.Center + half);
+        }
+
+        Vector3 collisionCenter = (min + max) * 0.5f;
+        var compound = new CompoundColliderShape();
+        foreach (VoxelCollisionBox box in collisionData.Boxes)
+        {
+            var boxShape = new BoxColliderShape(false, box.Size)
+            {
+                LocalOffset = box.Center - collisionCenter,
+            };
+            compound.AddChildShape(boxShape);
+        }
+
+        var collisionEntity = new Entity("ChunkCollision");
+        collisionEntity.Transform.Position = collisionCenter;
+        collisionEntity.Add(new RigidbodyComponent
+        {
+            ColliderShape = compound,
+            RigidBodyType = RigidBodyTypes.Static,
+            CanSleep = true,
+            Friction = 0.9f,
+            Restitution = 0.0f,
+        });
+        rootEntity.AddChild(collisionEntity);
     }
 
     private Model CreateModel(VoxelSurfaceMeshData meshData, Material material)

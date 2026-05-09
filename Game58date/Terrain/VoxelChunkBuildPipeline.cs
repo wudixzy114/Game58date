@@ -9,6 +9,7 @@ public sealed class VoxelChunkBuildPipeline
 {
     private readonly TerrainChunkGenerator generator;
     private readonly VoxelChunkMesher mesher;
+    private readonly VoxelChunkCollisionBuilder collisionBuilder;
     private readonly int maxConcurrentBuilds;
     private readonly Queue<ChunkBuildRequest> queuedRequests = new();
     private readonly Queue<ChunkBuildResult> readyResults = new();
@@ -17,10 +18,11 @@ public sealed class VoxelChunkBuildPipeline
     private readonly Dictionary<VoxelChunkCoordinate, Task<ChunkBuildResult>> runningBuilds = new();
     private readonly Dictionary<VoxelChunkCoordinate, int> readyRevisions = new();
 
-    public VoxelChunkBuildPipeline(TerrainChunkGenerator generator, VoxelChunkMesher mesher, int maxConcurrentBuilds)
+    public VoxelChunkBuildPipeline(TerrainChunkGenerator generator, VoxelChunkMesher mesher, VoxelChunkCollisionBuilder collisionBuilder, int maxConcurrentBuilds)
     {
         this.generator = generator;
         this.mesher = mesher;
+        this.collisionBuilder = collisionBuilder;
         this.maxConcurrentBuilds = Math.Max(1, maxConcurrentBuilds);
     }
 
@@ -132,6 +134,7 @@ public sealed class VoxelChunkBuildPipeline
     {
         VoxelChunkData data = generator.Generate(request.Coordinate);
         VoxelChunkMeshData meshData = mesher.Build(data);
-        return new ChunkBuildResult(request.Revision, request.Coordinate, data, meshData);
+        VoxelChunkCollisionData collisionData = collisionBuilder.Build(data);
+        return new ChunkBuildResult(request.Revision, request.Coordinate, data, meshData, collisionData);
     }
 }
