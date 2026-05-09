@@ -4,6 +4,7 @@ using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
+using Stride.Engine;
 
 namespace Game58date.Terrain;
 
@@ -18,10 +19,24 @@ public sealed class VoxelChunkModelFactory
         materialFactory = new TerrainMaterialFactory(graphicsDevice);
     }
 
-    public Model CreateModel(VoxelChunkMeshData meshData)
+    public void AttachModels(Entity rootEntity, VoxelChunkMeshData meshData)
     {
-        Material material = materialFactory.GetOrCreate();
+        if (!meshData.Solid.IsEmpty)
+        {
+            rootEntity.Add(new ModelComponent(CreateModel(meshData.Solid, materialFactory.GetOrCreateTerrainMaterial())));
+        }
 
+        if (!meshData.Water.IsEmpty)
+        {
+            var waterEntity = new Entity("WaterSurface");
+            waterEntity.Transform.Position = new Vector3(0f, 0.03f, 0f);
+            waterEntity.Add(new ModelComponent(CreateModel(meshData.Water, materialFactory.GetOrCreateWaterMaterial())));
+            rootEntity.AddChild(waterEntity);
+        }
+    }
+
+    private Model CreateModel(VoxelSurfaceMeshData meshData, Material material)
+    {
         var vertexBuffer = Buffer.New(graphicsDevice, meshData.Vertices.ToArray(), BufferFlags.VertexBuffer, GraphicsResourceUsage.Immutable);
         var indexBuffer = Buffer.New(graphicsDevice, meshData.Indices.ToArray(), BufferFlags.IndexBuffer, GraphicsResourceUsage.Immutable);
 

@@ -34,6 +34,8 @@ public sealed class VoxelTerrainWorldRuntime
         if (force)
         {
             Stats.VisibleFaceCount = 0;
+            Stats.SolidFaceCount = 0;
+            Stats.WaterFaceCount = 0;
         }
 
         desiredChunks.Clear();
@@ -107,6 +109,8 @@ public sealed class VoxelTerrainWorldRuntime
         if (chunks.Remove(coordinate, out VoxelChunkRuntime? existing))
         {
             Stats.VisibleFaceCount -= existing.MeshData.FaceCount;
+            Stats.SolidFaceCount -= existing.MeshData.Solid.FaceCount;
+            Stats.WaterFaceCount -= existing.MeshData.Water.FaceCount;
             existing.Entity.Scene = null;
             TerrainRuntimeLogger.Logger.Debug($"Removed active chunk {coordinate}.");
         }
@@ -122,14 +126,13 @@ public sealed class VoxelTerrainWorldRuntime
             0f,
             result.Coordinate.Z * settings.ChunkSize * settings.VoxelScale);
 
-        if (!result.MeshData.IsEmpty)
-        {
-            entity.Add(new ModelComponent(modelFactory.CreateModel(result.MeshData)));
-        }
+        modelFactory.AttachModels(entity, result.MeshData);
 
         scene.Entities.Add(entity);
         chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, entity);
         Stats.VisibleFaceCount += result.MeshData.FaceCount;
+        Stats.SolidFaceCount += result.MeshData.Solid.FaceCount;
+        Stats.WaterFaceCount += result.MeshData.Water.FaceCount;
         TerrainRuntimeLogger.Logger.Debug($"Integrated chunk {result.Coordinate} rev={result.Revision}.");
     }
 }

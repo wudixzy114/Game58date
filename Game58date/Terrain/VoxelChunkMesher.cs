@@ -32,6 +32,14 @@ public sealed class VoxelChunkMesher
     {
         var mesh = new VoxelChunkMeshData();
         float scale = settings.VoxelScale;
+        BuildSurfaceMesh(chunk, mesh.Solid, scale, meshingWater: false);
+        BuildSurfaceMesh(chunk, mesh.Water, scale, meshingWater: true);
+
+        return mesh;
+    }
+
+    private static void BuildSurfaceMesh(VoxelChunkData chunk, VoxelSurfaceMeshData surface, float scale, bool meshingWater)
+    {
         Vector3 min = Vector3.Zero;
         Vector3 max = min;
 
@@ -46,18 +54,16 @@ public sealed class VoxelChunkMesher
 
             for (int plane = 0; plane <= planeLimit; plane++)
             {
-                BuildMask(chunk, face, plane, mask, duLimit, dvLimit);
-                EmitGreedyQuads(mesh, face, plane, mask, duLimit, dvLimit, scale, ref max);
+                BuildMask(chunk, face, plane, mask, duLimit, dvLimit, meshingWater);
+                EmitGreedyQuads(surface, face, plane, mask, duLimit, dvLimit, scale, ref max);
             }
         }
 
-        if (!mesh.IsEmpty)
+        if (!surface.IsEmpty)
         {
-            mesh.BoundingBox = new BoundingBox(min, max);
-            mesh.BoundingSphere = BoundingSphere.FromBox(mesh.BoundingBox);
+            surface.BoundingBox = new BoundingBox(min, max);
+            surface.BoundingSphere = BoundingSphere.FromBox(surface.BoundingBox);
         }
-
-        return mesh;
     }
 
     private static void BuildMask(
@@ -66,7 +72,8 @@ public sealed class VoxelChunkMesher
         int plane,
         Span<FaceMaskCell> mask,
         int duLimit,
-        int dvLimit)
+        int dvLimit,
+        bool meshingWater)
     {
         int index = 0;
 
@@ -88,7 +95,11 @@ public sealed class VoxelChunkMesher
                 BlockKind solidBlock = chunk.GetBlock(solid[0], solid[1], solid[2]);
                 BlockKind emptyBlock = chunk.GetBlock(empty[0], empty[1], empty[2]);
 
-                mask[index++] = IsSolid(solidBlock) && !IsSolid(emptyBlock)
+                bool shouldEmit = meshingWater
+                    ? IsWater(solidBlock) && IsAir(emptyBlock)
+                    : IsSolid(solidBlock) && !IsSolid(emptyBlock) && !IsWater(emptyBlock);
+
+                mask[index++] = shouldEmit
                     ? new FaceMaskCell(solidBlock)
                     : FaceMaskCell.Empty;
             }
@@ -96,7 +107,7 @@ public sealed class VoxelChunkMesher
     }
 
     private static void EmitGreedyQuads(
-        VoxelChunkMeshData mesh,
+        VoxelSurfaceMeshData surface,
         FaceDefinition face,
         int plane,
         Span<FaceMaskCell> mask,
@@ -143,7 +154,7 @@ public sealed class VoxelChunkMesher
                     }
                 }
 
-                AddQuad(mesh, face, plane, du, dv, width, height, cell.Block, scale, ref max);
+                AddQuad(surface, face, plane, du, dv, width, height, cell.Block, scale, ref max);
 
                 for (int clearV = 0; clearV < height; clearV++)
                 {
@@ -159,7 +170,7 @@ public sealed class VoxelChunkMesher
     }
 
     private static void AddQuad(
-        VoxelChunkMeshData mesh,
+        VoxelSurfaceMeshData surface,
         FaceDefinition face,
         int plane,
         int du,
@@ -175,19 +186,19 @@ public sealed class VoxelChunkMesher
         Vector3 p2 = BuildPosition(face, plane, du + width, dv + height, scale);
         Vector3 p3 = BuildPosition(face, plane, du, dv + height, scale);
 
-        int baseVertex = mesh.Vertices.Count;
-        mesh.Vertices.Add(new VertexPositionNormalTexture(p0, face.Normal, GetUv(block, 0, width, height)));
-        mesh.Vertices.Add(new VertexPositionNormalTexture(p1, face.Normal, GetUv(block, 1, width, height)));
-        mesh.Vertices.Add(new VertexPositionNormalTexture(p2, face.Normal, GetUv(block, 2, width, height)));
-        mesh.Vertices.Add(new VertexPositionNormalTexture(p3, face.Normal, GetUv(block, 3, width, height)));
+        int baseVertex = surface.Vertices.Count;
+        surface.Vertices.Add(new VertexPositionNormalTexture(p0, face.Normal, GetUv(block, 0, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p1, face.Normal, GetUv(block, 1, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p2, face.Normal, GetUv(block, 2, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p3, face.Normal, GetUv(block, 3, width, height)));
 
         // Stride's default back-face culling treats clockwise winding as the front face.
-        mesh.Indices.Add(baseVertex + 0);
-        mesh.Indices.Add(baseVertex + 1);
-        mesh.Indices.Add(baseVertex + 2);
-        mesh.Indices.Add(baseVertex + 0);
-        mesh.Indices.Add(baseVertex + 2);
-        mesh.Indices.Add(baseVertex + 3);
+        surface.Indices.Add(baseVertex + 0);
+        surface.Indices.Add(baseVertex + 1);
+        surface.Indices.Add(baseVertex + 2);
+        surface.Indices.Add(baseVertex + 0);
+        surface.Indices.Add(baseVertex + 2);
+        surface.Indices.Add(baseVertex + 3);
 
         max = Vector3.Max(max, p0);
         max = Vector3.Max(max, p1);
@@ -233,6 +244,16 @@ public sealed class VoxelChunkMesher
     private static bool IsSolid(BlockKind block)
     {
         return block is not BlockKind.Air and not BlockKind.Water;
+    }
+
+    private static bool IsWater(BlockKind block)
+    {
+        return block == BlockKind.Water;
+    }
+
+    private static bool IsAir(BlockKind block)
+    {
+        return block == BlockKind.Air;
     }
 
     private static void ValidateFaceDefinitions()

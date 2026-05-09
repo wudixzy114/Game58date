@@ -6,6 +6,10 @@ public sealed class TerrainRuntimeStats
 
     public int VisibleFaceCount { get; set; }
 
+    public int SolidFaceCount { get; set; }
+
+    public int WaterFaceCount { get; set; }
+
     public int QueuedBuildCount { get; set; }
 
     public int RunningBuildCount { get; set; }
