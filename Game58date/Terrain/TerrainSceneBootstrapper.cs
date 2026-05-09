@@ -1,81 +1,63 @@
 #nullable enable
+using System.Collections.Generic;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Rendering.Lights;
-using Stride.Physics;
 
 namespace Game58date.Terrain;
 
 public sealed class TerrainSceneBootstrapper
 {
-    public const float PlayerCapsuleRadius = 0.45f;
-    public const float PlayerCapsuleLength = 1.0f;
-    public const float PlayerHalfHeight = PlayerCapsuleRadius + PlayerCapsuleLength * 0.5f;
-    public const float PlayerEyeHeightFromCenter = 0.67f;
+    public const float PlayerRadius = FirstPersonCharacterController.DefaultRadius;
+    public const float PlayerEyeHeightFromFeet = FirstPersonCharacterController.DefaultEyeHeight;
+    public const float PlayerHeadHeightAboveEye = FirstPersonCharacterController.DefaultHeadHeightAboveEye;
 
     public Entity EnsureCamera(Scene scene)
     {
+        Entity? cameraEntity = null;
         foreach (Entity entity in scene.Entities)
         {
             if (entity.Name == "Camera")
             {
-                return entity;
+                cameraEntity = entity;
+                break;
             }
         }
 
-        var cameraEntity = new Entity("RuntimeCamera");
-        cameraEntity.Transform.Position = new Vector3(24f, 34f, -24f);
-        cameraEntity.Transform.RotationEulerXYZ = new Vector3(0.55f, 0.75f, 0f);
-        cameraEntity.Add(new CameraComponent());
-        cameraEntity.Add(new BasicCameraController
+        if (cameraEntity is null)
         {
-            KeyboardMovementSpeed = new Vector3(18f, 18f, 18f),
-            SpeedFactor = 4f,
-        });
+            cameraEntity = new Entity("Camera");
+            cameraEntity.Transform.Position = new Vector3(24f, 34f, -24f);
+            cameraEntity.Transform.RotationEulerXYZ = new Vector3(0.55f, 0.75f, 0f);
+            scene.Entities.Add(cameraEntity);
+        }
 
-        scene.Entities.Add(cameraEntity);
+        if (cameraEntity.Get<CameraComponent>() is null)
+        {
+            cameraEntity.Add(new CameraComponent());
+        }
+
         return cameraEntity;
     }
 
-    public Entity EnsureFirstPersonPlayer(Scene scene, Vector3 spawnPosition, Entity cameraEntity)
+    public FirstPersonCharacterController EnsureFirstPersonController(Entity cameraEntity, VoxelTerrainWorldRuntime runtime)
     {
-        foreach (Entity entity in scene.Entities)
+        FirstPersonCharacterController? controller = cameraEntity.Get<FirstPersonCharacterController>();
+        if (controller is not null)
         {
-            if (entity.Name == "FirstPersonPlayer")
-            {
-                FirstPersonCharacterController? existingController = entity.Get<FirstPersonCharacterController>();
-                if (existingController is not null)
-                {
-                    existingController.CameraEntity = cameraEntity;
-                }
-
-                return entity;
-            }
+            controller.Initialize(runtime);
+            return controller;
         }
 
-        var playerEntity = new Entity("FirstPersonPlayer");
-        playerEntity.Transform.Position = spawnPosition;
-
-        var character = new CharacterComponent
+        controller = new FirstPersonCharacterController
         {
-            ColliderShape = new CapsuleColliderShape(false, PlayerCapsuleRadius, PlayerCapsuleLength, ShapeOrientation.UpY),
-            StepHeight = 0.45f,
-            JumpSpeed = 7.2f,
-            MaxSlope = new AngleSingle(47f, AngleType.Degree),
-            FallSpeed = 45f,
-            Gravity = new Vector3(0f, -24f, 0f),
+            Radius = PlayerRadius,
+            EyeHeightFromFeet = PlayerEyeHeightFromFeet,
+            HeadHeightAboveEye = PlayerHeadHeightAboveEye,
         };
-
-        var controller = new FirstPersonCharacterController
-        {
-            CameraEntity = cameraEntity,
-            EyeHeight = PlayerEyeHeightFromCenter,
-        };
-
-        playerEntity.Add(character);
-        playerEntity.Add(controller);
-        scene.Entities.Add(playerEntity);
-        return playerEntity;
+        controller.Initialize(runtime);
+        cameraEntity.Add(controller);
+        return controller;
     }
 
     public void EnsureTerrainLighting(Scene scene)
@@ -119,8 +101,9 @@ public sealed class TerrainSceneBootstrapper
         lightEntity.Transform.Rotation = Quaternion.BetweenDirections(-Vector3.UnitZ, desiredLightDirection);
     }
 
-    public void DisableLegacyEntities(Scene scene)
+    public void PruneLegacySceneEntities(Scene scene)
     {
+        var entitiesToRemove = new List<Entity>();
         foreach (Entity entity in scene.Entities)
         {
             if (entity.Name is not ("Ground" or "Sphere"))
@@ -128,11 +111,12 @@ public sealed class TerrainSceneBootstrapper
                 continue;
             }
 
-            ModelComponent? model = entity.Get<ModelComponent>();
-            if (model is not null)
-            {
-                model.Enabled = false;
-            }
+            entitiesToRemove.Add(entity);
+        }
+
+        foreach (Entity entity in entitiesToRemove)
+        {
+            entity.Scene = null;
         }
     }
 }

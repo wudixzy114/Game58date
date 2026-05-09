@@ -68,6 +68,8 @@ public sealed class VoxelChunkModelFactory
         {
             ColliderShape = compound,
             RigidBodyType = RigidBodyTypes.Static,
+            CollisionGroup = CollisionFilterGroups.StaticFilter,
+            CanCollideWith = CollisionFilterGroupFlags.AllFilter,
             CanSleep = true,
             Friction = 0.9f,
             Restitution = 0.0f,

@@ -3,8 +3,7 @@ using System;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
 using Stride.Engine;
-using Stride.Input;
-using Stride.Profiling;
+using Stride.Physics;
 
 namespace Game58date.Terrain;
 
@@ -12,19 +11,14 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
 {
     private readonly TerrainGenerationSettings settings = new();
     private readonly TerrainSceneBootstrapper sceneBootstrapper = new();
-    private readonly TerrainDebugOverlay debugOverlay = new();
     private readonly VoxelChunkOverrideStore overrideStore = new();
 
     private VoxelTerrainWorldRuntime? worldRuntime;
     private Entity? cameraEntity;
-    private Entity? playerEntity;
-    private BasicCameraController? observerCameraController;
     private FirstPersonCharacterController? firstPersonController;
     private Scene? scene;
-    private TerrainViewMode viewMode = TerrainViewMode.Observer;
-    private Vector3 observerResetPosition;
-    private Quaternion observerResetRotation;
-    private Vector3 playerResetPosition;
+    private Simulation? simulation;
+    private Quaternion spawnRotation = Quaternion.Identity;
 
     public override void Start()
     {
@@ -35,6 +29,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         }
 
         scene = Entity.Scene ?? throw new InvalidOperationException("Terrain runtime requires an active scene.");
+        simulation = Services.GetService<Simulation>();
 
         var generator = new TerrainChunkGenerator(settings, overrideStore);
         var mesher = new VoxelChunkMesher(settings);
@@ -42,121 +37,67 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         worldRuntime = new VoxelTerrainWorldRuntime(settings, overrideStore, generator, mesher, modelFactory);
 
         cameraEntity = sceneBootstrapper.EnsureCamera(scene);
-        observerCameraController = cameraEntity.Get<BasicCameraController>();
+        firstPersonController = sceneBootstrapper.EnsureFirstPersonController(cameraEntity, worldRuntime);
         sceneBootstrapper.EnsureTerrainLighting(scene);
-        sceneBootstrapper.DisableLegacyEntities(scene);
-        worldRuntime.WarmupSpawnArea(scene, cameraEntity.Transform.Position, radiusInChunks: 1);
-        worldRuntime.RefreshVisibleChunks(scene, cameraEntity.Transform.Position, force: false);
+        sceneBootstrapper.PruneLegacySceneEntities(scene);
 
-        Vector3 spawnPosition = GetPlayerSpawnPosition(cameraEntity.Transform.Position);
-        playerEntity = sceneBootstrapper.EnsureFirstPersonPlayer(scene, spawnPosition, cameraEntity);
-        firstPersonController = playerEntity.Get<FirstPersonCharacterController>();
-        firstPersonController?.SnapTo(spawnPosition);
+        Vector3 desiredSpawnPosition = cameraEntity.Transform.Position;
+        spawnRotation = cameraEntity.Transform.Rotation;
 
-        observerResetPosition = cameraEntity.Transform.Position;
-        observerResetRotation = cameraEntity.Transform.Rotation;
-        playerResetPosition = spawnPosition;
-        SetViewMode(TerrainViewMode.FirstPerson);
+        worldRuntime.WarmupSpawnArea(scene, desiredSpawnPosition, radiusInChunks: 1);
+        Vector3 spawnEyePosition = ResolveSpawnEyePosition(desiredSpawnPosition, "startup");
+        worldRuntime.WarmupSpawnArea(scene, spawnEyePosition, radiusInChunks: 1);
+        worldRuntime.RefreshVisibleChunks(scene, spawnEyePosition, force: false);
+
+        firstPersonController.MatchPose(spawnEyePosition, spawnRotation);
+        firstPersonController.SetActiveMode(true);
     }
 
     public override void Update()
     {
-        if (scene is null || cameraEntity is null || worldRuntime is null)
+        if (scene is null || cameraEntity is null || worldRuntime is null || firstPersonController is null)
         {
             return;
         }
 
-        bool force = false;
-        if (Input.IsKeyPressed(Keys.F7))
-        {
-            force = true;
-        }
-
-        if (Input.IsKeyPressed(Keys.F5))
-        {
-            SetViewMode(viewMode == TerrainViewMode.FirstPerson ? TerrainViewMode.Observer : TerrainViewMode.FirstPerson);
-        }
-
-        if (Input.IsKeyPressed(Keys.F6))
-        {
-            ResetCurrentModePosition();
-        }
-
-        if (Input.IsKeyPressed(Keys.F8))
-        {
-            worldRuntime.SetBlockWorld(0, settings.WaterLevel + 1, 0, BlockKind.Air);
-        }
-
-        worldRuntime.RefreshVisibleChunks(scene, cameraEntity.Transform.Position, force);
-        DebugTextSystem? debugText = (Game as Game)?.DebugTextSystem;
-        debugOverlay.Draw(debugText, worldRuntime.Stats, settings, viewMode);
+        worldRuntime.RefreshVisibleChunks(scene, firstPersonController.EyePosition, force: false);
     }
 
-    private void SetViewMode(TerrainViewMode nextMode)
+    public override void Cancel()
     {
-        if (cameraEntity is null || firstPersonController is null)
-        {
-            return;
-        }
-
-        if (viewMode == nextMode)
-        {
-            return;
-        }
-
-        if (nextMode == TerrainViewMode.FirstPerson)
-        {
-            if (observerCameraController is not null)
-            {
-                observerCameraController.IsControlEnabled = false;
-            }
-
-            Vector3 safePosition = GetPlayerSpawnPosition(cameraEntity.Transform.Position);
-            worldRuntime?.WarmupSpawnArea(scene!, safePosition, radiusInChunks: 1);
-            firstPersonController.MatchCameraPose(safePosition + Vector3.UnitY * TerrainSceneBootstrapper.PlayerEyeHeightFromCenter, cameraEntity.Transform.Rotation);
-            firstPersonController.SetActiveMode(true);
-        }
-        else
-        {
-            firstPersonController.SetActiveMode(false);
-            if (observerCameraController is not null)
-            {
-                observerCameraController.IsControlEnabled = true;
-            }
-
-            Game.IsMouseVisible = true;
-        }
-
-        viewMode = nextMode;
+        firstPersonController?.SetActiveMode(false);
+        base.Cancel();
     }
 
-    private void ResetCurrentModePosition()
-    {
-        if (cameraEntity is null || firstPersonController is null)
-        {
-            return;
-        }
-
-        if (viewMode == TerrainViewMode.FirstPerson)
-        {
-            firstPersonController.SnapTo(playerResetPosition);
-            firstPersonController.SetYawPitch(0f, 0f);
-            TerrainRuntimeLogger.Logger.Info("Reset first-person player to spawn position.");
-            return;
-        }
-
-        cameraEntity.Transform.Position = observerResetPosition;
-        cameraEntity.Transform.Rotation = observerResetRotation;
-        TerrainRuntimeLogger.Logger.Info("Reset observer camera to default debug position.");
-    }
-
-    private Vector3 GetPlayerSpawnPosition(Vector3 fallbackPosition)
+    private Vector3 ResolveSpawnEyePosition(Vector3 desiredEyePosition, string context)
     {
         if (worldRuntime is null)
         {
-            return fallbackPosition;
+            return desiredEyePosition;
         }
 
-        return worldRuntime.ResolveSafeSpawnPosition(fallbackPosition, searchRadius: 3);
+        Vector3 candidate = worldRuntime.ResolveSafeSpawnPosition(desiredEyePosition, searchRadius: 3);
+        Vector3 final = candidate;
+        string rayInfo = "physics=n/a";
+
+        simulation ??= Services.GetService<Simulation>();
+        if (simulation is not null)
+        {
+            Vector3 rayFrom = new(candidate.X, settings.ChunkHeight + 24f, candidate.Z);
+            Vector3 rayTo = new(candidate.X, -16f, candidate.Z);
+            if (simulation.Raycast(rayFrom, rayTo, out HitResult hit, CollisionFilterGroups.DefaultFilter, CollisionFilterGroupFlags.AllFilter, false, 0))
+            {
+                final = new Vector3(candidate.X, hit.Point.Y + TerrainSceneBootstrapper.PlayerEyeHeightFromFeet + 0.15f, candidate.Z);
+                rayInfo = $"physics=hit y={hit.Point.Y:F2} collider={hit.Collider?.Entity?.Name ?? "unknown"}";
+            }
+            else
+            {
+                rayInfo = "physics=miss";
+            }
+        }
+
+        string message = $"Spawn[{context}] desired=({desiredEyePosition.X:F2},{desiredEyePosition.Y:F2},{desiredEyePosition.Z:F2}) candidate=({candidate.X:F2},{candidate.Y:F2},{candidate.Z:F2}) final=({final.X:F2},{final.Y:F2},{final.Z:F2}) {rayInfo}";
+        TerrainRuntimeLogger.Logger.Info(message);
+        return final;
     }
 }

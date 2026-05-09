@@ -8,6 +8,15 @@ namespace Game58date;
 
 public sealed class PrototypeRuntimeGame : Game
 {
+    protected override void BeginRun()
+    {
+        base.BeginRun();
+
+        Window.FullscreenIsBorderlessWindow = true;
+        Window.IsFullscreen = true;
+        IsMouseVisible = false;
+    }
+
     protected override async Task LoadContent()
     {
         await base.LoadContent();

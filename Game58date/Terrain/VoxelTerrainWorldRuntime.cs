@@ -150,11 +150,8 @@ public sealed class VoxelTerrainWorldRuntime
 
     private static float ComputeSpawnY(int surfaceHeight)
     {
-        // surfaceHeight is the block index of the topmost solid block; the block occupies
-        // Y from surfaceHeight to surfaceHeight + 1, so the surface top is at surfaceHeight + 1.
-        // Place the capsule bottom slightly above that to avoid initial penetration.
         const float verticalSafetyMargin = 0.15f;
-        return (surfaceHeight + 1) + TerrainSceneBootstrapper.PlayerHalfHeight + verticalSafetyMargin;
+        return (surfaceHeight + 1) + TerrainSceneBootstrapper.PlayerEyeHeightFromFeet + verticalSafetyMargin;
     }
 
     public void SetBlockWorld(int worldX, int worldY, int worldZ, BlockKind block)
@@ -317,6 +314,11 @@ public sealed class VoxelTerrainWorldRuntime
 
         VoxelChunkData sampledChunk = generator.Generate(coordinate);
         return sampledChunk.GetBlock(localX, worldY, localZ);
+    }
+
+    public BlockKind SampleBlockWorld(int worldX, int worldY, int worldZ)
+    {
+        return GetBlockWorld(worldX, worldY, worldZ);
     }
 
     private void RemoveActiveChunk(VoxelChunkCoordinate coordinate)

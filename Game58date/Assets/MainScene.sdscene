@@ -30,6 +30,7 @@ Hierarchy:
                     d352fde88f0f5954ad59a71a286ddb75: !Game58date.BasicCameraController,Game58date
                         Id: b0bf5f9d-e2ec-47b9-9395-7810385a502d
                         Gamepad: false
+                        IsControlEnabled: true
                         KeyboardMovementSpeed: {X: 5.0, Y: 5.0, Z: 5.0}
                         TouchMovementSpeed: {X: 0.7, Y: 0.7, Z: 0.3}
                         SpeedFactor: 5.0
