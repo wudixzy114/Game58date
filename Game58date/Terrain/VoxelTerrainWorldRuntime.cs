@@ -86,6 +86,9 @@ public sealed class VoxelTerrainWorldRuntime
         float bestScore = float.MaxValue;
         Vector3 bestPosition = desiredPosition;
         bool found = false;
+        int highestSurface = int.MinValue;
+        int highestSurfaceX = baseX;
+        int highestSurfaceZ = baseZ;
 
         for (int dz = -searchRadius; dz <= searchRadius; dz++)
         {
@@ -98,13 +101,21 @@ public sealed class VoxelTerrainWorldRuntime
                     continue;
                 }
 
+                if (surfaceHeight > highestSurface)
+                {
+                    highestSurface = surfaceHeight;
+                    highestSurfaceX = worldX;
+                    highestSurfaceZ = worldZ;
+                }
+
                 if (!HasStandingClearance(worldX, surfaceHeight, worldZ))
                 {
                     continue;
                 }
 
                 float horizontalDistance = dx * dx + dz * dz;
-                float verticalPenalty = MathF.Abs((surfaceHeight + TerrainSceneBootstrapper.PlayerHalfHeight) - desiredPosition.Y) * 0.15f;
+                float spawnY = ComputeSpawnY(surfaceHeight);
+                float verticalPenalty = MathF.Abs(spawnY - desiredPosition.Y) * 0.15f;
                 float score = horizontalDistance + verticalPenalty;
                 if (score >= bestScore)
                 {
@@ -112,15 +123,38 @@ public sealed class VoxelTerrainWorldRuntime
                 }
 
                 bestScore = score;
-                bestPosition = new Vector3(
-                    worldX + 0.5f,
-                    surfaceHeight + TerrainSceneBootstrapper.PlayerHalfHeight + 0.15f,
-                    worldZ + 0.5f);
+                bestPosition = new Vector3(worldX + 0.5f, spawnY, worldZ + 0.5f);
                 found = true;
             }
         }
 
-        return found ? bestPosition : desiredPosition;
+        if (found)
+        {
+            return bestPosition;
+        }
+
+        if (highestSurface != int.MinValue)
+        {
+            TerrainRuntimeLogger.Logger.Warning(
+                $"No clearance for spawn near ({baseX},{baseZ}); falling back to top of highest column at ({highestSurfaceX},{highestSurfaceZ}) y={highestSurface}.");
+            return new Vector3(
+                highestSurfaceX + 0.5f,
+                ComputeSpawnY(highestSurface),
+                highestSurfaceZ + 0.5f);
+        }
+
+        TerrainRuntimeLogger.Logger.Warning(
+            $"Spawn search failed near ({baseX},{baseZ}); using desired position {desiredPosition}.");
+        return desiredPosition;
+    }
+
+    private static float ComputeSpawnY(int surfaceHeight)
+    {
+        // surfaceHeight is the block index of the topmost solid block; the block occupies
+        // Y from surfaceHeight to surfaceHeight + 1, so the surface top is at surfaceHeight + 1.
+        // Place the capsule bottom slightly above that to avoid initial penetration.
+        const float verticalSafetyMargin = 0.15f;
+        return (surfaceHeight + 1) + TerrainSceneBootstrapper.PlayerHalfHeight + verticalSafetyMargin;
     }
 
     public void SetBlockWorld(int worldX, int worldY, int worldZ, BlockKind block)
@@ -182,8 +216,14 @@ public sealed class VoxelTerrainWorldRuntime
         {
             if (!desiredChunks.Contains(coordinate))
             {
-                runtime.Entity.Scene = null;
+                runtime.VisualEntity.Scene = null;
+                if (runtime.CollisionEntity is not null)
+                {
+                    runtime.CollisionEntity.Scene = null;
+                }
                 Stats.VisibleFaceCount -= runtime.MeshData.FaceCount;
+                Stats.SolidFaceCount -= runtime.MeshData.Solid.FaceCount;
+                Stats.WaterFaceCount -= runtime.MeshData.Water.FaceCount;
                 toRemove.Add(coordinate);
             }
         }
@@ -286,7 +326,11 @@ public sealed class VoxelTerrainWorldRuntime
             Stats.VisibleFaceCount -= existing.MeshData.FaceCount;
             Stats.SolidFaceCount -= existing.MeshData.Solid.FaceCount;
             Stats.WaterFaceCount -= existing.MeshData.Water.FaceCount;
-            existing.Entity.Scene = null;
+            existing.VisualEntity.Scene = null;
+            if (existing.CollisionEntity is not null)
+            {
+                existing.CollisionEntity.Scene = null;
+            }
             TerrainRuntimeLogger.Logger.Debug($"Removed active chunk {coordinate}.");
         }
     }
@@ -295,17 +339,26 @@ public sealed class VoxelTerrainWorldRuntime
     {
         RemoveActiveChunk(result.Coordinate);
 
-        var entity = new Entity($"Chunk_{result.Coordinate.X}_{result.Coordinate.Z}");
-        entity.Transform.Position = new Vector3(
+        Vector3 chunkWorldPosition = new(
             result.Coordinate.X * settings.ChunkSize * settings.VoxelScale,
             0f,
             result.Coordinate.Z * settings.ChunkSize * settings.VoxelScale);
 
-        modelFactory.AttachModels(entity, result.MeshData);
-        modelFactory.AttachCollision(entity, result.CollisionData);
+        var visualEntity = new Entity($"Chunk_{result.Coordinate.X}_{result.Coordinate.Z}");
+        visualEntity.Transform.Position = chunkWorldPosition;
+        modelFactory.AttachModels(visualEntity, result.MeshData);
+        scene.Entities.Add(visualEntity);
 
-        scene.Entities.Add(entity);
-        chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, result.CollisionData, entity);
+        Entity? collisionEntity = null;
+        if (!result.CollisionData.IsEmpty)
+        {
+            collisionEntity = new Entity($"ChunkCollision_{result.Coordinate.X}_{result.Coordinate.Z}");
+            collisionEntity.Transform.Position = chunkWorldPosition;
+            modelFactory.AttachCollision(collisionEntity, result.CollisionData);
+            scene.Entities.Add(collisionEntity);
+        }
+
+        chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, result.CollisionData, visualEntity, collisionEntity);
         Stats.VisibleFaceCount += result.MeshData.FaceCount;
         Stats.SolidFaceCount += result.MeshData.Solid.FaceCount;
         Stats.WaterFaceCount += result.MeshData.Water.FaceCount;

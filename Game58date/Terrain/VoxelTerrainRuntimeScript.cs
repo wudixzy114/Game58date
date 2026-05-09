@@ -112,6 +112,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
             }
 
             Vector3 safePosition = GetPlayerSpawnPosition(cameraEntity.Transform.Position);
+            worldRuntime?.WarmupSpawnArea(scene!, safePosition, radiusInChunks: 1);
             firstPersonController.MatchCameraPose(safePosition + Vector3.UnitY * TerrainSceneBootstrapper.PlayerEyeHeightFromCenter, cameraEntity.Transform.Rotation);
             firstPersonController.SetActiveMode(true);
         }

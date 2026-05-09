@@ -36,7 +36,7 @@ public sealed class VoxelChunkModelFactory
         }
     }
 
-    public void AttachCollision(Entity rootEntity, VoxelChunkCollisionData collisionData)
+    public void AttachCollision(Entity collisionEntity, VoxelChunkCollisionData collisionData)
     {
         if (collisionData.IsEmpty)
         {
@@ -63,8 +63,7 @@ public sealed class VoxelChunkModelFactory
             compound.AddChildShape(boxShape);
         }
 
-        var collisionEntity = new Entity("ChunkCollision");
-        collisionEntity.Transform.Position = collisionCenter;
+        collisionEntity.Transform.Position += collisionCenter;
         collisionEntity.Add(new RigidbodyComponent
         {
             ColliderShape = compound,
@@ -73,7 +72,6 @@ public sealed class VoxelChunkModelFactory
             Friction = 0.9f,
             Restitution = 0.0f,
         });
-        rootEntity.AddChild(collisionEntity);
     }
 
     private Model CreateModel(VoxelSurfaceMeshData meshData, Material material)
