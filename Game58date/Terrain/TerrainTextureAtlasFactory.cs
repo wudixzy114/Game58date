@@ -7,8 +7,8 @@ namespace Game58date.Terrain;
 
 public sealed class TerrainTextureAtlasFactory
 {
-    private const int TileSize = 32;
-    private const int TileCount = 6;
+    private const int TileSize = 64;
+    private const int TileCount = 12;
 
     private readonly GraphicsDevice graphicsDevice;
     private readonly GraphicsContext graphicsContext;
@@ -32,12 +32,18 @@ public sealed class TerrainTextureAtlasFactory
         int height = TileSize;
         var pixels = new Color[width * height];
 
-        FillTile(pixels, width, 0, new Color(46, 42, 44), new Color(66, 61, 64), true);
-        FillTile(pixels, width, 1, new Color(104, 104, 109), new Color(138, 138, 144), true);
-        FillTile(pixels, width, 2, new Color(109, 81, 54), new Color(140, 106, 71), true);
-        FillTile(pixels, width, 3, new Color(87, 126, 62), new Color(126, 162, 86), true);
-        FillTile(pixels, width, 4, new Color(194, 176, 122), new Color(226, 211, 154), false);
-        FillTile(pixels, width, 5, new Color(84, 92, 82), new Color(120, 128, 118), true);
+        FillBedrockTile(pixels, width, (int)TerrainTextureTile.Bedrock);
+        FillRockTile(pixels, width, (int)TerrainTextureTile.Stone, new Color(92, 94, 98), new Color(136, 139, 145), 0.82f);
+        FillRockTile(pixels, width, (int)TerrainTextureTile.Cliff, new Color(108, 104, 94), new Color(150, 145, 132), 0.88f);
+        FillSoilTile(pixels, width, (int)TerrainTextureTile.Dirt, new Color(101, 75, 52), new Color(138, 104, 72), 0.12f);
+        FillGrassTopTile(pixels, width, (int)TerrainTextureTile.GrassTop);
+        FillGrassSideTile(pixels, width, (int)TerrainTextureTile.GrassSide);
+        FillSandTile(pixels, width, (int)TerrainTextureTile.Sand, new Color(198, 181, 126), new Color(229, 214, 161));
+        FillSandTile(pixels, width, (int)TerrainTextureTile.Sandstone, new Color(171, 143, 99), new Color(208, 183, 131));
+        FillPebbleTile(pixels, width, (int)TerrainTextureTile.Gravel, new Color(104, 108, 102), new Color(142, 146, 136));
+        FillSoilTile(pixels, width, (int)TerrainTextureTile.DrySoil, new Color(126, 97, 64), new Color(159, 125, 87), 0.05f);
+        FillRockTile(pixels, width, (int)TerrainTextureTile.MossyStone, new Color(86, 97, 84), new Color(128, 140, 120), 0.65f);
+        FillSoilTile(pixels, width, (int)TerrainTextureTile.RichSoil, new Color(82, 58, 38), new Color(119, 85, 56), 0.20f);
 
         Color[][] mipChain = BuildMipChain(width, height, pixels);
         Texture texture = Texture.New2D(
@@ -136,6 +142,166 @@ public sealed class TerrainTextureAtlasFactory
                 }
 
                 pixels[y * atlasWidth + xOffset + x] = Lerp(dark, light, Math.Clamp(blend, 0f, 1f));
+            }
+        }
+    }
+
+    private static void FillBedrockTile(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, new Color(34, 31, 35), new Color(60, 57, 63), true);
+        OverlayCracks(pixels, atlasWidth, tileIndex, new Color(18, 17, 20), spacing: 9, intensity: 0.32f);
+    }
+
+    private static void FillRockTile(Color[] pixels, int atlasWidth, int tileIndex, Color dark, Color light, float ridgeStrength)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, dark, light, true);
+        OverlayRidges(pixels, atlasWidth, tileIndex, ridgeStrength);
+    }
+
+    private static void FillSoilTile(Color[] pixels, int atlasWidth, int tileIndex, Color dark, Color light, float grainBoost)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, dark, light, false);
+        OverlaySoilGrain(pixels, atlasWidth, tileIndex, grainBoost);
+    }
+
+    private static void FillGrassTopTile(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float bladeNoise = Noise(x * 3, y * 2, 1803);
+                float macroNoise = Noise(x, y, 1819);
+                float floralNoise = Noise(x * 5, y * 5, 1847);
+                float green = Math.Clamp(0.35f + bladeNoise * 0.45f + macroNoise * 0.20f, 0f, 1f);
+                Color baseColor = Lerp(new Color(65, 99, 42), new Color(131, 170, 85), green);
+                if (floralNoise > 0.94f)
+                {
+                    baseColor = Lerp(baseColor, new Color(204, 196, 120), 0.45f);
+                }
+
+                pixels[y * atlasWidth + xOffset + x] = baseColor;
+            }
+        }
+    }
+
+    private static void FillGrassSideTile(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            float heightRatio = y / (float)(TileSize - 1);
+            for (int x = 0; x < TileSize; x++)
+            {
+                float grassBand = Math.Clamp(1f - heightRatio * 2.8f, 0f, 1f);
+                float grassNoise = Noise(x * 2, y * 2, 1901);
+                float soilNoise = Noise(x, y, 1913);
+
+                Color soil = Lerp(new Color(98, 73, 50), new Color(138, 106, 72), soilNoise * 0.75f);
+                Color grass = Lerp(new Color(68, 106, 44), new Color(126, 162, 84), grassNoise);
+                pixels[y * atlasWidth + xOffset + x] = Lerp(soil, grass, grassBand);
+            }
+        }
+    }
+
+    private static void FillSandTile(Color[] pixels, int atlasWidth, int tileIndex, Color dark, Color light)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, dark, light, false);
+        OverlayWindRipples(pixels, atlasWidth, tileIndex);
+    }
+
+    private static void FillPebbleTile(Color[] pixels, int atlasWidth, int tileIndex, Color dark, Color light)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, dark, light, true);
+        OverlayPebbles(pixels, atlasWidth, tileIndex);
+    }
+
+    private static void OverlayCracks(Color[] pixels, int atlasWidth, int tileIndex, Color crackColor, int spacing, float intensity)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float crack = MathF.Abs(((x + y * 2) % spacing) - spacing * 0.5f) / (spacing * 0.5f);
+                if (crack < 0.18f && Noise(x, y, tileIndex * 71 + 11) > 0.42f)
+                {
+                    int index = y * atlasWidth + xOffset + x;
+                    pixels[index] = Lerp(pixels[index], crackColor, intensity * (1f - crack / 0.18f));
+                }
+            }
+        }
+    }
+
+    private static void OverlayRidges(Color[] pixels, int atlasWidth, int tileIndex, float ridgeStrength)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float ridge = Noise(x * 4, y * 4, tileIndex * 97 + 23);
+                if (ridge > 0.78f)
+                {
+                    int index = y * atlasWidth + xOffset + x;
+                    pixels[index] = Lerp(pixels[index], new Color(202, 202, 196), (ridge - 0.78f) * ridgeStrength);
+                }
+            }
+        }
+    }
+
+    private static void OverlaySoilGrain(Color[] pixels, int atlasWidth, int tileIndex, float grainBoost)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float grain = Noise(x * 6, y * 6, tileIndex * 131 + 17);
+                float amount = MathF.Max(0f, grain - 0.62f) * (0.35f + grainBoost);
+                if (amount <= 0f)
+                {
+                    continue;
+                }
+
+                int index = y * atlasWidth + xOffset + x;
+                pixels[index] = Lerp(pixels[index], new Color(182, 144, 96), amount);
+            }
+        }
+    }
+
+    private static void OverlayWindRipples(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float ripple = MathF.Sin((x + y * 0.35f) * 0.42f) * 0.5f + 0.5f;
+                int index = y * atlasWidth + xOffset + x;
+                pixels[index] = ripple > 0.55f
+                    ? Lerp(pixels[index], new Color(241, 229, 181), (ripple - 0.55f) * 0.18f)
+                    : pixels[index];
+            }
+        }
+    }
+
+    private static void OverlayPebbles(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float pebbleNoise = Noise(x * 5, y * 5, tileIndex * 173 + 29);
+                if (pebbleNoise <= 0.90f)
+                {
+                    continue;
+                }
+
+                int index = y * atlasWidth + xOffset + x;
+                pixels[index] = Lerp(pixels[index], new Color(188, 190, 182), (pebbleNoise - 0.90f) * 0.65f);
             }
         }
     }

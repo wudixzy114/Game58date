@@ -18,6 +18,7 @@ public sealed class VoxelChunkMesher
     };
 
     private readonly TerrainGenerationSettings settings;
+    private readonly TerrainFaceTextureResolver faceTextureResolver = new();
 
     static VoxelChunkMesher()
     {
@@ -44,7 +45,7 @@ public sealed class VoxelChunkMesher
         return mesh;
     }
 
-    private static void BuildSurfaceMesh(VoxelChunkData chunk, VoxelSurfaceMeshData surface, float scale, bool meshingWater, Func<int, int, int, BlockKind>? sampleBlockWorld)
+    private void BuildSurfaceMesh(VoxelChunkData chunk, VoxelSurfaceMeshData surface, float scale, bool meshingWater, Func<int, int, int, BlockKind>? sampleBlockWorld)
     {
         Vector3 min = Vector3.Zero;
         Vector3 max = min;
@@ -61,7 +62,7 @@ public sealed class VoxelChunkMesher
             for (int plane = 0; plane <= planeLimit; plane++)
             {
                 BuildMask(chunk, face, plane, mask, duLimit, dvLimit, meshingWater, sampleBlockWorld);
-                EmitGreedyQuads(surface, face, plane, mask, duLimit, dvLimit, scale, ref max);
+                EmitGreedyQuads(chunk, surface, face, plane, mask, duLimit, dvLimit, scale, ref max);
             }
         }
 
@@ -113,7 +114,8 @@ public sealed class VoxelChunkMesher
         }
     }
 
-    private static void EmitGreedyQuads(
+    private void EmitGreedyQuads(
+        VoxelChunkData chunk,
         VoxelSurfaceMeshData surface,
         FaceDefinition face,
         int plane,
@@ -161,7 +163,7 @@ public sealed class VoxelChunkMesher
                     }
                 }
 
-                AddQuad(surface, face, plane, du, dv, width, height, cell.Block, scale, ref max);
+                AddQuad(surface, faceTextureResolver, chunk, face, plane, du, dv, width, height, cell.Block, scale, ref max);
 
                 for (int clearV = 0; clearV < height; clearV++)
                 {
@@ -178,6 +180,8 @@ public sealed class VoxelChunkMesher
 
     private static void AddQuad(
         VoxelSurfaceMeshData surface,
+        TerrainFaceTextureResolver faceTextureResolver,
+        VoxelChunkData chunk,
         FaceDefinition face,
         int plane,
         int du,
@@ -193,11 +197,14 @@ public sealed class VoxelChunkMesher
         Vector3 p2 = BuildPosition(face, plane, du + width, dv + height, scale);
         Vector3 p3 = BuildPosition(face, plane, du, dv + height, scale);
 
+        bool isFaceExposedToSky = IsFaceExposedToSky(chunk, face, plane, du, dv, width, height);
+        TerrainTextureTile tile = faceTextureResolver.Resolve(block, face.Normal, isFaceExposedToSky);
+
         int baseVertex = surface.Vertices.Count;
-        surface.Vertices.Add(new VertexPositionNormalTexture(p0, face.Normal, GetUv(block, 0, width, height)));
-        surface.Vertices.Add(new VertexPositionNormalTexture(p1, face.Normal, GetUv(block, 1, width, height)));
-        surface.Vertices.Add(new VertexPositionNormalTexture(p2, face.Normal, GetUv(block, 2, width, height)));
-        surface.Vertices.Add(new VertexPositionNormalTexture(p3, face.Normal, GetUv(block, 3, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p0, face.Normal, GetUv(tile, 0, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p1, face.Normal, GetUv(tile, 1, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p2, face.Normal, GetUv(tile, 2, width, height)));
+        surface.Vertices.Add(new VertexPositionNormalTexture(p3, face.Normal, GetUv(tile, 3, width, height)));
 
         // Stride's default back-face culling treats clockwise winding as the front face.
         surface.Indices.Add(baseVertex + 0);
@@ -222,20 +229,11 @@ public sealed class VoxelChunkMesher
         return position;
     }
 
-    private static Vector2 GetUv(BlockKind block, int cornerIndex, int width, int height)
+    private static Vector2 GetUv(TerrainTextureTile tile, int cornerIndex, int width, int height)
     {
-        int tile = block switch
-        {
-            BlockKind.Bedrock => 0,
-            BlockKind.Stone => 1,
-            BlockKind.Dirt => 2,
-            BlockKind.Grass => 3,
-            BlockKind.Sand => 4,
-            _ => 5,
-        };
-
-        const float tileSize = 1f / 6f;
-        float minU = tile * tileSize;
+        const float atlasTileCount = 12f;
+        float tileSize = 1f / atlasTileCount;
+        float minU = (int)tile * tileSize;
         float maxU = minU + tileSize;
         float repeatV = Math.Max(1, height);
 
@@ -246,6 +244,41 @@ public sealed class VoxelChunkMesher
             2 => new Vector2(maxU, 0f),
             _ => new Vector2(maxU, repeatV),
         };
+    }
+
+    private static bool IsFaceExposedToSky(VoxelChunkData chunk, FaceDefinition face, int plane, int du, int dv, int width, int height)
+    {
+        if (face.Normal.Y <= 0f)
+        {
+            return false;
+        }
+
+        int localY = plane - 1;
+        if (localY < 0)
+        {
+            return false;
+        }
+
+        for (int offsetV = 0; offsetV < height; offsetV++)
+        {
+            for (int offsetU = 0; offsetU < width; offsetU++)
+            {
+                int[] point = new int[3];
+                point[face.UAxis] = du + offsetU;
+                point[face.VAxis] = dv + offsetV;
+                point[face.Axis] = localY;
+
+                for (int y = point[1] + 1; y < chunk.Height; y++)
+                {
+                    if (chunk.GetBlock(point[0], y, point[2]) is not BlockKind.Air and not BlockKind.Water)
+                    {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     private static bool IsSolid(BlockKind block)
