@@ -8,6 +8,7 @@ _ReSharper*
 *.VC.db
 *.vshost.exe
 *.manifest
+!Game58date.Windows/app.manifest
 *.sdf
 [Bb]in/
 obj/
