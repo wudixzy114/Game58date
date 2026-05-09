@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Game58date.Gameplay;
 using Game58date.Save;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
@@ -22,11 +23,13 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
     private Simulation? simulation;
     private Quaternion spawnRotation = Quaternion.Identity;
     private GameSaveData? activeSaveData;
+    private WorldLawRuntimeController? worldLawController;
     private TerrainRuntimeStartupOptions startupOptions = new();
     private float autosaveCountdown;
     private int lastSavedOverrideRevision = -1;
     private Vector3 lastSavedEyePosition;
     private Quaternion lastSavedRotation = Quaternion.Identity;
+    private float lastSavedWorldLawTime;
 
     public override void Start()
     {
@@ -52,8 +55,9 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
 
         cameraEntity = sceneBootstrapper.EnsureCamera(scene);
         firstPersonController = sceneBootstrapper.EnsureFirstPersonController(cameraEntity, worldRuntime);
-        sceneBootstrapper.EnsureTerrainLighting(scene);
+        Entity directionalLightEntity = sceneBootstrapper.EnsureTerrainLighting(scene);
         sceneBootstrapper.PruneLegacySceneEntities(scene);
+        worldLawController = EnsureWorldLawController(cameraEntity, directionalLightEntity, activeSaveData.Gameplay);
 
         Vector3 desiredSpawnPosition = cameraEntity.Transform.Position;
         if (activeSaveData.Player.EyePosition is { } savedEyePosition && savedEyePosition.IsFinite)
@@ -157,10 +161,12 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         Vector3 currentEyePosition = controller.EyePosition;
         Quaternion currentRotation = controller.Entity.Transform.Rotation;
         int currentOverrideRevision = overrideStore.Revision;
+        float currentWorldLawTime = worldLawController?.RuntimeState.WorldTimeSeconds ?? 0f;
 
         bool poseChanged = !NearlyEqual(lastSavedEyePosition, currentEyePosition) || !NearlyEqual(lastSavedRotation, currentRotation);
         bool overridesChanged = lastSavedOverrideRevision != currentOverrideRevision;
-        if (!force && !poseChanged && !overridesChanged)
+        bool worldLawChanged = !MathUtil.NearEqual(lastSavedWorldLawTime, currentWorldLawTime);
+        if (!force && !poseChanged && !overridesChanged && !worldLawChanged)
         {
             return;
         }
@@ -169,6 +175,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         activeSaveData.Player.EyePosition = SerializableVector3.FromStride(currentEyePosition);
         activeSaveData.Player.Rotation = SerializableQuaternion.FromStride(currentRotation);
         activeSaveData.Terrain = VoxelChunkOverrideSaveMapper.CreateTerrainSaveData(settings, overrideStore);
+        activeSaveData.Gameplay = WorldLawSaveMapper.CreateSaveData(worldLawController?.CreateSnapshot() ?? new WorldLawRuntimeState());
 
         if (!saveRepository.Save(activeSaveData))
         {
@@ -177,6 +184,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
 
         CacheLastSavedPose(currentEyePosition, currentRotation);
         lastSavedOverrideRevision = currentOverrideRevision;
+        lastSavedWorldLawTime = currentWorldLawTime;
         TerrainRuntimeLogger.Logger.Info(
             $"Saved runtime state reason={reason} slot={activeSaveData.SlotName} seed={settings.Seed} overrides={overrideStore.GetTotalOverrideCount()} eye=({currentEyePosition.X:F2},{currentEyePosition.Y:F2},{currentEyePosition.Z:F2}).");
     }
@@ -185,6 +193,21 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
     {
         lastSavedEyePosition = eyePosition;
         lastSavedRotation = Quaternion.Normalize(rotation);
+    }
+
+    private WorldLawRuntimeController EnsureWorldLawController(Entity camera, Entity directionalLightEntity, GameplaySaveData gameplaySaveData)
+    {
+        WorldLawRuntimeController? controller = Entity.Get<WorldLawRuntimeController>();
+        if (controller is null)
+        {
+            controller = new WorldLawRuntimeController();
+            controller.Initialize(WorldLawSaveMapper.BuildRuntimeState(gameplaySaveData), camera, directionalLightEntity);
+            Entity.Add(controller);
+            return controller;
+        }
+
+        controller.Initialize(WorldLawSaveMapper.BuildRuntimeState(gameplaySaveData), camera, directionalLightEntity);
+        return controller;
     }
 
     private static bool NearlyEqual(Vector3 left, Vector3 right)

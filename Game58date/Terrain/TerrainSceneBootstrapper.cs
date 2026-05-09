@@ -65,7 +65,7 @@ public sealed class TerrainSceneBootstrapper
         return controller;
     }
 
-    public void EnsureTerrainLighting(Scene scene)
+    public Entity EnsureTerrainLighting(Scene scene)
     {
         Entity? lightEntity = null;
         foreach (Entity entity in scene.Entities)
@@ -104,6 +104,7 @@ public sealed class TerrainSceneBootstrapper
 
         Vector3 desiredLightDirection = Vector3.Normalize(new Vector3(-0.35f, -1.0f, -0.25f));
         lightEntity.Transform.Rotation = Quaternion.BetweenDirections(-Vector3.UnitZ, desiredLightDirection);
+        return lightEntity;
     }
 
     public void PruneLegacySceneEntities(Scene scene)

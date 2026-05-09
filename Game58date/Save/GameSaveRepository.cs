@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -139,12 +140,18 @@ public sealed class GameSaveRepository
         }
 
         saveData.Terrain ??= new TerrainSaveData();
-        saveData.Terrain.ChunkOverrides ??= new System.Collections.Generic.List<ChunkOverrideSaveData>();
+        saveData.Terrain.ChunkOverrides ??= new List<ChunkOverrideSaveData>();
 
         foreach (ChunkOverrideSaveData chunkOverride in saveData.Terrain.ChunkOverrides)
         {
-            chunkOverride.Blocks ??= new System.Collections.Generic.List<BlockOverrideSaveData>();
+            chunkOverride.Blocks ??= new List<BlockOverrideSaveData>();
         }
+
+        saveData.Gameplay ??= new GameplaySaveData();
+        saveData.Gameplay.WorldLaw ??= new WorldLawSaveData();
+        saveData.Gameplay.WorldLaw.World ??= new WorldLawStateSaveData();
+        saveData.Gameplay.WorldLaw.Behavior ??= new PlayerBehaviorSaveData();
+        saveData.Gameplay.WorldLaw.RecentCausality ??= new List<CausalityRecordSaveData>();
     }
 
     private static void BackupCorruptSave(string slotPath)
