@@ -18,6 +18,8 @@ public sealed class TerrainRuntimeStats
 
     public int EnvironmentChunkCount { get; set; }
 
+    public int EnvironmentPooledEntityCount { get; set; }
+
     public string WeatherSummary { get; set; } = "clear";
 
     public string LastErrorMessage { get; set; } = "None";

@@ -220,6 +220,7 @@ public sealed class VoxelTerrainWorldRuntime
         {
             if (!desiredChunks.Contains(coordinate))
             {
+                environmentDecorator?.ReleaseChunkDecoration(runtime.EnvironmentRoot);
                 runtime.VisualEntity.Scene = null;
                 if (runtime.CollisionEntity is not null)
                 {
@@ -341,6 +342,7 @@ public sealed class VoxelTerrainWorldRuntime
             Stats.VisibleFaceCount -= existing.MeshData.FaceCount;
             Stats.SolidFaceCount -= existing.MeshData.Solid.FaceCount;
             Stats.WaterFaceCount -= existing.MeshData.Water.FaceCount;
+            environmentDecorator?.ReleaseChunkDecoration(existing.EnvironmentRoot);
             existing.VisualEntity.Scene = null;
             if (existing.CollisionEntity is not null)
             {
@@ -363,7 +365,7 @@ public sealed class VoxelTerrainWorldRuntime
         visualEntity.Transform.Position = chunkWorldPosition;
         modelFactory.AttachModels(visualEntity, result.MeshData);
         Vector3? cameraFocus = scene.Entities.Count > 0 ? FindPrimaryCameraPosition(scene) : null;
-        environmentDecorator?.DecorateChunk(visualEntity, result.Data, cameraFocus);
+        EnvironmentChunkDecoration? decoration = environmentDecorator?.DecorateChunk(visualEntity, result.Data, cameraFocus);
         scene.Entities.Add(visualEntity);
 
         Entity? collisionEntity = null;
@@ -375,8 +377,8 @@ public sealed class VoxelTerrainWorldRuntime
             scene.Entities.Add(collisionEntity);
         }
 
-        int environmentEntityCount = environmentDecorator?.CountEntitiesForChunk(result.Data, cameraFocus) ?? 0;
-        chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, result.CollisionData, visualEntity, collisionEntity, environmentEntityCount);
+        int environmentEntityCount = decoration?.EntityCount ?? 0;
+        chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, result.CollisionData, visualEntity, collisionEntity, environmentEntityCount, decoration?.RootEntity);
         Stats.VisibleFaceCount += result.MeshData.FaceCount;
         Stats.SolidFaceCount += result.MeshData.Solid.FaceCount;
         Stats.WaterFaceCount += result.MeshData.Water.FaceCount;
@@ -423,5 +425,6 @@ public sealed class VoxelTerrainWorldRuntime
 
         Stats.EnvironmentChunkCount = environmentChunkCount;
         Stats.EnvironmentEntityCount = environmentEntityCount;
+        Stats.EnvironmentPooledEntityCount = environmentDecorator?.PooledEntityCount ?? 0;
     }
 }

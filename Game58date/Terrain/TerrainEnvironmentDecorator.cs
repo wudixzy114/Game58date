@@ -11,19 +11,24 @@ public sealed class TerrainEnvironmentDecorator
     private readonly TerrainGenerationSettings settings;
     private readonly TerrainChunkGenerator generator;
     private readonly EnvironmentVisualFactory visualFactory;
-    private readonly TerrainEnvironmentRuleSet ruleSet = new();
+    private readonly TerrainEnvironmentRuleSet ruleSet;
+    private readonly EnvironmentEntityPool entityPool = new();
 
     public TerrainEnvironmentDecorator(
         TerrainGenerationSettings settings,
         TerrainChunkGenerator generator,
-        EnvironmentVisualFactory visualFactory)
+        EnvironmentVisualFactory visualFactory,
+        string? runtimeRootDirectory = null)
     {
         this.settings = settings;
         this.generator = generator;
         this.visualFactory = visualFactory;
+        ruleSet = TerrainEnvironmentRuleSetLoader.LoadOrCreateDefault(runtimeRootDirectory);
     }
 
-    public void DecorateChunk(Entity chunkEntity, VoxelChunkData chunkData, Vector3? focusWorldPosition = null)
+    public int PooledEntityCount => entityPool.PooledCount;
+
+    public EnvironmentChunkDecoration DecorateChunk(Entity chunkEntity, VoxelChunkData chunkData, Vector3? focusWorldPosition = null)
     {
         var environmentRoot = new Entity("EnvironmentDecor");
         Vector3 focus = focusWorldPosition ?? GetChunkCenterWorld(chunkData);
@@ -36,7 +41,25 @@ public sealed class TerrainEnvironmentDecorator
         if (placedCount > 0)
         {
             chunkEntity.AddChild(environmentRoot);
+            return new EnvironmentChunkDecoration(environmentRoot, placedCount);
         }
+
+        return new EnvironmentChunkDecoration(null, 0);
+    }
+
+    public void ReleaseChunkDecoration(Entity? environmentRoot)
+    {
+        if (environmentRoot is null)
+        {
+            return;
+        }
+
+        foreach (Entity child in environmentRoot.GetChildren())
+        {
+            ReturnEntityTree(child);
+        }
+
+        environmentRoot.Scene = null;
     }
 
     public int CountEntitiesForChunk(VoxelChunkData chunkData, Vector3? focusWorldPosition = null)
@@ -207,7 +230,16 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreatePropEntity(EnvironmentPlacementRecord placement)
     {
-        Entity entity = placement.Variant.Kind switch
+        string poolKey = BuildPoolKey(placement.Variant);
+        Entity entity = entityPool.GetOrCreate(poolKey, () => CreatePropEntityCore(placement));
+        PrepareEntity(entity, placement);
+        AttachDistanceCulling(entity, placement.Variant);
+        return entity;
+    }
+
+    private Entity CreatePropEntityCore(EnvironmentPlacementRecord placement)
+    {
+        return placement.Variant.Kind switch
         {
             EnvironmentPropKind.BroadleafTree => CreateBroadleafTree(placement),
             EnvironmentPropKind.PineTree => CreatePineTree(placement),
@@ -222,9 +254,6 @@ public sealed class TerrainEnvironmentDecorator
             EnvironmentPropKind.Gull => CreateGull(placement),
             _ => CreateRockCluster(placement),
         };
-
-        AttachDistanceCulling(entity, placement.Variant);
-        return entity;
     }
 
     private bool TryGetPlacementContext(VoxelChunkData chunkData, int localX, int localZ, int clearanceHeight, out PlacementContext context)
@@ -275,7 +304,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateBroadleafTree(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateEnvironmentEntity("Trunk", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/trunk", EnvironmentMaterialKind.Bark), new Vector3(0f, 1.25f * scale, 0f), new Vector3(0.42f, 2.5f * scale, 0.42f)));
         root.AddChild(visualFactory.CreateEnvironmentEntity("CanopyA", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/canopy_a", EnvironmentMaterialKind.Leaf), new Vector3(0f, 3.25f * scale, 0f), new Vector3(1.85f * scale, 1.45f * scale, 1.85f * scale)));
         root.AddChild(visualFactory.CreateEnvironmentEntity("CanopyB", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/canopy_b", EnvironmentMaterialKind.Leaf), new Vector3(0.35f * scale, 4.15f * scale, -0.15f * scale), new Vector3(1.15f * scale, 0.95f * scale, 1.15f * scale)));
@@ -286,7 +315,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreatePineTree(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateEnvironmentEntity("Trunk", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/trunk", EnvironmentMaterialKind.Bark), new Vector3(0f, 1.5f * scale, 0f), new Vector3(0.35f, 3.0f * scale, 0.35f)));
         root.AddChild(visualFactory.CreateEnvironmentEntity("NeedlesA", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/needles_a", EnvironmentMaterialKind.Needle), new Vector3(0f, 2.25f * scale, 0f), new Vector3(1.30f * scale, 1.00f * scale, 1.30f * scale)));
         root.AddChild(visualFactory.CreateEnvironmentEntity("NeedlesB", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/needles_b", EnvironmentMaterialKind.Needle), new Vector3(0f, 3.35f * scale, 0f), new Vector3(1.00f * scale, 0.95f * scale, 1.00f * scale)));
@@ -298,7 +327,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateWetlandTree(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Trunk", EnvironmentMaterialKind.Bark, new Vector3(0f, 1.05f * scale, 0f), new Vector3(0.30f, 2.10f * scale, 0.30f)));
         root.AddChild(visualFactory.CreateBoxEntity("CanopyA", EnvironmentMaterialKind.Leaf, new Vector3(0f, 2.75f * scale, 0f), new Vector3(1.40f * scale, 1.10f * scale, 1.40f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("CanopyB", EnvironmentMaterialKind.Leaf, new Vector3(0.28f * scale, 3.35f * scale, 0.12f * scale), new Vector3(0.88f * scale, 0.72f * scale, 0.88f * scale)));
@@ -309,7 +338,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateBush(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("BushA", EnvironmentMaterialKind.Leaf, new Vector3(0f, 0.55f * scale, 0f), new Vector3(1.05f * scale, 0.70f * scale, 1.05f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("BushB", EnvironmentMaterialKind.Leaf, new Vector3(0.35f * scale, 0.78f * scale, -0.15f * scale), new Vector3(0.70f * scale, 0.48f * scale, 0.70f * scale)));
         AttachMotion(root, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
@@ -319,7 +348,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateReedPatch(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("ReedA", EnvironmentMaterialKind.Reed, new Vector3(-0.20f * scale, 0.65f * scale, 0.05f * scale), new Vector3(0.08f, 1.30f * scale, 0.08f), new Vector3(0f, 0f, -0.08f)));
         root.AddChild(visualFactory.CreateBoxEntity("ReedB", EnvironmentMaterialKind.Reed, new Vector3(0.15f * scale, 0.52f * scale, -0.15f * scale), new Vector3(0.08f, 1.05f * scale, 0.08f), new Vector3(0.06f, 0f, 0.08f)));
         root.AddChild(visualFactory.CreateBoxEntity("ReedC", EnvironmentMaterialKind.Reed, new Vector3(0.05f * scale, 0.75f * scale, 0.20f * scale), new Vector3(0.08f, 1.50f * scale, 0.08f), new Vector3(-0.04f, 0f, -0.05f)));
@@ -331,7 +360,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateRockCluster(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("RockA", EnvironmentMaterialKind.Stone, new Vector3(-0.25f * scale, 0.28f * scale, 0.12f * scale), new Vector3(0.75f * scale, 0.56f * scale, 0.55f * scale), new Vector3(0.10f, 0.15f, 0.04f)));
         root.AddChild(visualFactory.CreateBoxEntity("RockB", EnvironmentMaterialKind.Stone, new Vector3(0.18f * scale, 0.20f * scale, -0.12f * scale), new Vector3(0.56f * scale, 0.40f * scale, 0.46f * scale), new Vector3(0.03f, -0.08f, 0.10f)));
         root.AddChild(visualFactory.CreateBoxEntity("RockC", EnvironmentMaterialKind.Stone, new Vector3(0.02f * scale, 0.42f * scale, 0.25f * scale), new Vector3(0.40f * scale, 0.30f * scale, 0.32f * scale), new Vector3(0.12f, 0.02f, -0.07f)));
@@ -341,7 +370,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateCairn(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Base", EnvironmentMaterialKind.RuinStone, new Vector3(0f, 0.24f * scale, 0f), new Vector3(1.10f * scale, 0.48f * scale, 1.10f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("Mid", EnvironmentMaterialKind.Stone, new Vector3(0.08f * scale, 0.74f * scale, -0.05f * scale), new Vector3(0.74f * scale, 0.36f * scale, 0.74f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("Top", EnvironmentMaterialKind.Stone, new Vector3(-0.04f * scale, 1.15f * scale, 0.08f * scale), new Vector3(0.44f * scale, 0.26f * scale, 0.44f * scale)));
@@ -351,7 +380,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateRuinArch(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("PillarA", EnvironmentMaterialKind.RuinStone, new Vector3(-0.70f * scale, 1.25f * scale, 0f), new Vector3(0.42f * scale, 2.50f * scale, 0.42f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("PillarB", EnvironmentMaterialKind.RuinStone, new Vector3(0.70f * scale, 1.12f * scale, 0f), new Vector3(0.42f * scale, 2.24f * scale, 0.42f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("Lintel", EnvironmentMaterialKind.RuinStone, new Vector3(0f, 2.42f * scale, 0f), new Vector3(1.72f * scale, 0.34f * scale, 0.52f * scale)));
@@ -362,7 +391,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateDeer(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition + new Vector3(0f, 0.18f * scale, 0f), placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Body", EnvironmentMaterialKind.Deer, new Vector3(0f, 0.82f * scale, 0f), new Vector3(1.20f * scale, 0.65f * scale, 0.48f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("Neck", EnvironmentMaterialKind.Deer, new Vector3(0.48f * scale, 1.20f * scale, 0f), new Vector3(0.24f * scale, 0.56f * scale, 0.22f * scale), new Vector3(-0.08f, 0f, 0.18f)));
         root.AddChild(visualFactory.CreateBoxEntity("Head", EnvironmentMaterialKind.Deer, new Vector3(0.70f * scale, 1.44f * scale, 0f), new Vector3(0.46f * scale, 0.28f * scale, 0.24f * scale)));
@@ -377,7 +406,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateGoat(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition + new Vector3(0f, 0.16f * scale, 0f), placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Body", EnvironmentMaterialKind.Goat, new Vector3(0f, 0.72f * scale, 0f), new Vector3(0.95f * scale, 0.56f * scale, 0.42f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("Head", EnvironmentMaterialKind.Goat, new Vector3(0.52f * scale, 1.08f * scale, 0f), new Vector3(0.34f * scale, 0.26f * scale, 0.22f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("LegA", EnvironmentMaterialKind.Goat, new Vector3(-0.25f * scale, 0.24f * scale, 0.12f * scale), new Vector3(0.10f * scale, 0.48f * scale, 0.10f * scale)));
@@ -391,7 +420,7 @@ public sealed class TerrainEnvironmentDecorator
     private Entity CreateGull(EnvironmentPlacementRecord placement)
     {
         float scale = placement.Variant.HeightScale;
-        var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition + new Vector3(0f, 0.95f * scale, 0f), placement.YawRadians);
+        var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Body", EnvironmentMaterialKind.Gull, new Vector3(0f, 0.20f * scale, 0f), new Vector3(0.42f * scale, 0.20f * scale, 0.22f * scale)));
         root.AddChild(visualFactory.CreateBoxEntity("WingL", EnvironmentMaterialKind.Gull, new Vector3(0f, 0.18f * scale, -0.22f * scale), new Vector3(0.82f * scale, 0.06f * scale, 0.12f * scale), new Vector3(0f, 0f, -0.12f)));
         root.AddChild(visualFactory.CreateBoxEntity("WingR", EnvironmentMaterialKind.Gull, new Vector3(0f, 0.18f * scale, 0.22f * scale), new Vector3(0.82f * scale, 0.06f * scale, 0.12f * scale), new Vector3(0f, 0f, 0.12f)));
@@ -399,12 +428,9 @@ public sealed class TerrainEnvironmentDecorator
         return root;
     }
 
-    private static Entity CreateRootEntity(string name, Vector3 position, float yawRadians)
+    private static Entity CreateRootEntity(string name)
     {
-        var entity = new Entity(name);
-        entity.Transform.Position = position;
-        entity.Transform.RotationEulerXYZ = new Vector3(0f, yawRadians, 0f);
-        return entity;
+        return new Entity(name);
     }
 
     private static void AttachMotion(Entity entity, Vector3 positionAmplitude, Vector3 rotationAmplitudeEuler, float speed, float phase)
@@ -425,6 +451,22 @@ public sealed class TerrainEnvironmentDecorator
 
     private static void AttachDistanceCulling(Entity entity, EnvironmentPropVariant variant)
     {
+        if (entity.Get<EnvironmentDistanceCullingScript>() is EnvironmentDistanceCullingScript existing)
+        {
+            existing.VisibleDistance = ResolveVisibleDistance(variant);
+            existing.Hysteresis = 8f;
+            return;
+        }
+
+        entity.Add(new EnvironmentDistanceCullingScript
+        {
+            VisibleDistance = ResolveVisibleDistance(variant),
+            Hysteresis = 8f,
+        });
+    }
+
+    private static float ResolveVisibleDistance(EnvironmentPropVariant variant)
+    {
         float visibleDistance = variant.Lod switch
         {
             EnvironmentLodLevel.Near => 52f,
@@ -441,11 +483,62 @@ public sealed class TerrainEnvironmentDecorator
             _ => 0f,
         };
 
-        entity.Add(new EnvironmentDistanceCullingScript
+        return visibleDistance;
+    }
+
+    private static string BuildPoolKey(EnvironmentPropVariant variant)
+    {
+        return $"{variant.Kind}:{variant.Lod}:{variant.Name}:{variant.Asset.AssetKey}";
+    }
+
+    private void ReturnEntityTree(Entity entity)
+    {
+        foreach (Entity child in entity.GetChildren())
         {
-            VisibleDistance = visibleDistance,
-            Hysteresis = 8f,
-        });
+            ReturnEntityTree(child);
+        }
+
+        if (TryGetVariant(entity, out EnvironmentPropVariant variant))
+        {
+            entityPool.Return(BuildPoolKey(variant), entity);
+        }
+    }
+
+    private static bool TryGetVariant(Entity entity, out EnvironmentPropVariant variant)
+    {
+        if (entity.Tags.TryGetValue(EnvironmentEntityTagKeys.PropVariant, out object? taggedVariant) && taggedVariant is EnvironmentPropVariant stored)
+        {
+            variant = stored;
+            return true;
+        }
+
+        variant = default;
+        return false;
+    }
+
+    private static void PrepareEntity(Entity entity, EnvironmentPlacementRecord placement)
+    {
+        entity.Tags.SetObject(EnvironmentEntityTagKeys.PropVariant, placement.Variant);
+        entity.Transform.Position = placement.LocalPosition;
+        entity.Transform.RotationEulerXYZ = new Vector3(0f, placement.YawRadians, 0f);
+        entity.Transform.Scale = Vector3.One;
+
+        if (placement.Variant.Kind is EnvironmentPropKind.Deer or EnvironmentPropKind.Goat)
+        {
+            entity.Transform.Position += new Vector3(0f, (placement.Variant.HeightScale <= 0f ? 0f : placement.Variant.HeightScale) * 0.16f, 0f);
+        }
+        else if (placement.Variant.Kind == EnvironmentPropKind.Gull)
+        {
+            entity.Transform.Position += new Vector3(0f, (placement.Variant.HeightScale <= 0f ? 0f : placement.Variant.HeightScale) * 0.95f, 0f);
+        }
+
+        if (entity.Get<AmbientMotionScript>() is AmbientMotionScript motion)
+        {
+            motion.PositionAmplitude = placement.Variant.PositionAmplitude;
+            motion.RotationAmplitudeEuler = placement.Variant.RotationAmplitude;
+            motion.Speed = placement.Variant.MotionSpeed;
+            motion.Phase = placement.Variation * MathF.PI * 2f;
+        }
     }
 
     private Vector3 GetChunkCenterWorld(VoxelChunkData chunkData)
