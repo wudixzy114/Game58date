@@ -5,9 +5,10 @@ using Stride.Input;
 
 namespace Game58date.Gameplay.UI;
 
-public sealed class GameUiRuntimeController : SyncScript
+public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
 {
     private readonly GameUiTheme theme = GameUiTheme.Default;
+    private readonly GameUiContextState uiContext = new();
     private GameUiComposer? composer;
     private bool lastMenuTogglePressed;
 
@@ -22,7 +23,9 @@ public sealed class GameUiRuntimeController : SyncScript
         }
 
         composer = new GameUiComposer(theme);
-        composer.Attach(Entity, Game, WorldLawController);
+        composer.Attach(Entity, this);
+        uiContext.DebugHudVisible = WorldLawController.IsDebugHudVisible;
+        composer.Update(GameUiStateMapper.Map(WorldLawController.RuntimeState, uiContext, theme));
     }
 
     public override void Update()
@@ -34,7 +37,9 @@ public sealed class GameUiRuntimeController : SyncScript
 
         HandleUiHotkeys();
         WorldLawRuntimeState state = WorldLawController.RuntimeState;
-        composer.Update(state);
+        uiContext.DebugHudVisible = WorldLawController.IsDebugHudVisible;
+        uiContext.IntentDraftText = WorldLawController.CurrentIntentDraftText;
+        composer.Update(GameUiStateMapper.Map(state, uiContext, theme));
     }
 
     private void HandleUiHotkeys()
@@ -46,7 +51,35 @@ public sealed class GameUiRuntimeController : SyncScript
             return;
         }
 
-        composer.ToggleMenu();
+        ToggleUiMenu();
         lastMenuTogglePressed = true;
+    }
+
+    public void ToggleUiMenu()
+    {
+        uiContext.MenuVisible = !uiContext.MenuVisible;
+    }
+
+    public void ToggleNarrativeInput()
+    {
+        if (WorldLawController is null)
+        {
+            return;
+        }
+
+        bool next = !WorldLawController.RuntimeState.Intent.TextInputEnabled;
+        WorldLawController.SetIntentTextInputEnabled(next);
+    }
+
+    public void ToggleDebugHud()
+    {
+        if (WorldLawController is null)
+        {
+            return;
+        }
+
+        bool next = !WorldLawController.IsDebugHudVisible;
+        WorldLawController.SetDebugHudVisible(next);
+        uiContext.DebugHudVisible = next;
     }
 }

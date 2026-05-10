@@ -2,7 +2,6 @@
 using System;
 using Stride.Core.Mathematics;
 using Stride.Engine;
-using Stride.Games;
 using Stride.UI;
 using Stride.UI.Controls;
 using Stride.UI.Events;
@@ -16,16 +15,24 @@ public sealed class GameUiComposer
 
     private UIComponent? uiComponent;
     private Canvas? root;
+    private Border? modeTagBorder;
+    private TextBlock? modeTagText;
     private TextBlock? titleText;
+    private TextBlock? subtitleText;
     private TextBlock? stageText;
     private TextBlock? biomeText;
+    private Border? omenCalloutBorder;
     private TextBlock? omenText;
-    private TextBlock? intentText;
+    private TextBlock? omenDetailText;
     private TextBlock? profileText;
     private TextBlock? perceptionText;
+    private TextBlock? intentText;
     private TextBlock? helpText;
     private TextBlock? inputHintText;
+    private EditText? intentInput;
+    private Border? intentInputBorder;
     private TextBlock? lastIntentSummaryText;
+    private TextBlock? narrativeTitleText;
     private TextBlock? narrativeReasonText;
     private TextBlock? historyTitleText;
     private TextBlock? historyEntryA;
@@ -33,184 +40,116 @@ public sealed class GameUiComposer
     private TextBlock? historyEntryC;
     private Border? menuPanel;
     private TextBlock? menuTitleText;
-    private TextBlock? saveSlotText;
-    private TextBlock? saveMetaText;
-    private TextBlock? settingsSummaryText;
+    private TextBlock? menuStageText;
+    private TextBlock? menuMetaText;
+    private TextBlock? menuSettingsText;
     private TextBlock? menuHintText;
-    private EditText? intentInput;
-    private Border? intentInputBorder;
     private Button? menuToggleButton;
-    private Button? focusIntentButton;
-    private Button? toggleHudButton;
-    private StackPanel? logPanel;
-    private bool menuVisible;
-    private WorldLawRuntimeController? worldLawController;
+    private Button? narrativeInputButton;
+    private Button? debugHudButton;
+    private GameUiMeterWidgets? karmaMeter;
+    private GameUiMeterWidgets? blessingMeter;
+    private GameUiMeterWidgets? pathMeter;
+    private GameUiMeterWidgets? dangerMeter;
+    private IGameUiCommandSink? commandSink;
 
     public GameUiComposer(GameUiTheme theme)
     {
-        this.theme = theme;
+        this.theme = theme ?? throw new ArgumentNullException(nameof(theme));
     }
 
-    public void Attach(Entity owner, IGame game, WorldLawRuntimeController controller)
+    public void Attach(Entity owner, IGameUiCommandSink sink)
     {
-        worldLawController = controller;
+        commandSink = sink ?? throw new ArgumentNullException(nameof(sink));
         uiComponent = owner.Get<UIComponent>();
         if (uiComponent is null)
         {
-            uiComponent = new UIComponent();
+            uiComponent = new UIComponent
+            {
+                Resolution = new Vector3(1920f, 1080f, 1000f),
+            };
             owner.Add(uiComponent);
         }
 
         root = BuildRoot();
         uiComponent.Page = new UIPage { RootElement = root };
-        Update(controller.RuntimeState);
     }
 
-    public void Update(WorldLawRuntimeState state)
+    public void Update(GameUiViewState viewState)
     {
         if (root is null)
         {
             return;
         }
 
-        if (titleText is not null)
-        {
-            titleText.Text = "GAME58DATE";
-        }
-
-        if (stageText is not null)
-        {
-            stageText.Text = $"Hero Journey: {WorldLawEngine.GetStageTitle(state.Narrative.CurrentStage)}";
-        }
-
-        if (biomeText is not null)
-        {
-            biomeText.Text = $"Target Biome: {state.World.TargetBiome}";
-        }
-
-        if (omenText is not null)
-        {
-            string source = state.Omen.LastSource switch
-            {
-                OmenSource.Intent => "Intent",
-                OmenSource.EmergentWorldLaw => "World",
-                OmenSource.Causality => "Causality",
-                OmenSource.Narrative => "Narrative",
-                _ => "Dormant",
-            };
-            omenText.Text = $"Omen: {WorldLawEngine.GetOmenTitle(state.Omen.ActiveOmen?.OmenType ?? state.World.LastOmen)}  Score {state.Omen.LastScore * 100f:0}%  Source {source}";
-        }
-
-        if (intentText is not null)
-        {
-            string topic = state.Intent.LastIntent?.Topic.ToString() ?? "Unknown";
-            float confidence = state.Intent.LastIntent?.Confidence ?? 0f;
-            intentText.Text = $"Intent: {topic}  Confidence {confidence * 100f:0}%  Total {state.Intent.SubmittedIntentCount}";
-        }
-
-        if (profileText is not null)
-        {
-            profileText.Text =
-                $"Profile  Peace {state.Behavior.PeacefulTendency * 100f:0}%  Violence {state.Behavior.ViolentTendency * 100f:0}%  Faith {state.Behavior.FaithTendency * 100f:0}%  Curiosity {state.Behavior.CuriosityTendency * 100f:0}%";
-        }
-
-        if (perceptionText is not null)
-        {
-            string active = state.Perception.IsActive ? "Awakened" : "Dormant";
-            perceptionText.Text =
-                $"Perception: {active}  Power {state.Perception.Intensity * 100f:0}%  Remaining {state.Perception.ActiveSecondsRemaining:0.0}s  Cooldown {state.Perception.CooldownSecondsRemaining:0.0}s";
-        }
-
-        if (helpText is not null)
-        {
-            helpText.Text = "Enter submit  Tab focus  Q sense  F2 sea  F3 loss  F4 violent  F5 peaceful  F6 mentor";
-        }
-
-        if (inputHintText is not null)
-        {
-            inputHintText.Text = state.Intent.TextInputEnabled
-                ? "Your next sentence can bend the world. Speak a destination, desire, warning, or vow."
-                : "Text focus is currently disabled. Press Tab to return to narrative input mode.";
-        }
-
-        if (lastIntentSummaryText is not null)
-        {
-            string summary = state.Intent.LastIntent?.Summary ?? "No structured intent has been submitted yet.";
-            lastIntentSummaryText.Text = summary;
-        }
-
-        if (narrativeReasonText is not null)
-        {
-            narrativeReasonText.Text = state.Narrative.LastStageReason;
-        }
+        SetText(modeTagText, viewState.ModeTagText);
+        SetText(titleText, viewState.TitleText);
+        SetText(subtitleText, viewState.SubtitleText);
+        SetText(stageText, viewState.StageText);
+        SetText(biomeText, viewState.BiomeText);
+        SetText(omenText, viewState.OmenText);
+        SetText(omenDetailText, viewState.OmenDetailText);
+        SetText(profileText, viewState.ProfileText);
+        SetText(perceptionText, viewState.PerceptionText);
+        SetText(intentText, viewState.IntentText);
+        SetText(helpText, viewState.HelpText);
+        SetText(inputHintText, viewState.InputHintText);
+        SetText(lastIntentSummaryText, viewState.LastIntentSummaryText);
+        SetText(narrativeTitleText, viewState.NarrativeTitleText);
+        SetText(narrativeReasonText, viewState.NarrativeReasonText);
+        SetText(historyTitleText, viewState.HistoryTitleText);
+        SetText(historyEntryA, viewState.HistoryLines.Length > 0 ? viewState.HistoryLines[0] : string.Empty);
+        SetText(historyEntryB, viewState.HistoryLines.Length > 1 ? viewState.HistoryLines[1] : string.Empty);
+        SetText(historyEntryC, viewState.HistoryLines.Length > 2 ? viewState.HistoryLines[2] : string.Empty);
+        SetText(menuTitleText, viewState.MenuTitleText);
+        SetText(menuStageText, viewState.MenuStageText);
+        SetText(menuMetaText, viewState.MenuMetaText);
+        SetText(menuSettingsText, viewState.MenuSettingsText);
+        SetText(menuHintText, viewState.MenuHintText);
+        SetButtonText(menuToggleButton, viewState.MenuToggleButtonText);
+        SetButtonText(narrativeInputButton, viewState.NarrativeInputButtonText);
+        SetButtonText(debugHudButton, viewState.DebugHudButtonText);
 
         if (intentInput is not null)
         {
-            string text = state.Intent.LastIntent?.RawText ?? string.Empty;
-            if (!string.Equals(intentInput.Text, text, StringComparison.Ordinal))
+            if (!string.Equals(intentInput.Text, viewState.IntentDraftText, StringComparison.Ordinal))
             {
-                intentInput.Text = text;
+                intentInput.Text = viewState.IntentDraftText;
             }
-            intentInput.IsReadOnly = !state.Intent.TextInputEnabled;
+
+            intentInput.IsReadOnly = true;
+        }
+
+        if (modeTagBorder is not null)
+        {
+            modeTagBorder.BackgroundColor = viewState.ModeTagFillColor;
+        }
+
+        if (modeTagText is not null)
+        {
+            modeTagText.TextColor = viewState.ModeTagTextColor;
+        }
+
+        if (omenCalloutBorder is not null)
+        {
+            omenCalloutBorder.BorderColor = viewState.OmenAccentColor;
         }
 
         if (intentInputBorder is not null)
         {
-            intentInputBorder.BorderColor = state.Perception.IsActive ? theme.AccentCyan : theme.PanelBorder;
-            intentInputBorder.BackgroundColor = state.Perception.IsActive ? theme.PanelElevated : theme.InputFill;
-        }
-
-        if (historyTitleText is not null)
-        {
-            historyTitleText.Text = "Recent Signals";
-        }
-
-        if (historyEntryA is not null)
-        {
-            historyEntryA.Text = FormatHistoryLine(state, 0);
-        }
-
-        if (historyEntryB is not null)
-        {
-            historyEntryB.Text = FormatHistoryLine(state, 1);
-        }
-
-        if (historyEntryC is not null)
-        {
-            historyEntryC.Text = FormatHistoryLine(state, 2);
+            intentInputBorder.BorderColor = viewState.InputBorderColor;
+            intentInputBorder.BackgroundColor = viewState.InputFillColor;
         }
 
         if (menuPanel is not null)
         {
-            menuPanel.Visibility = menuVisible ? Visibility.Visible : Visibility.Collapsed;
+            menuPanel.Visibility = viewState.MenuVisible ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        if (menuTitleText is not null)
-        {
-            menuTitleText.Text = "System Atlas";
-        }
-
-        if (saveSlotText is not null)
-        {
-            saveSlotText.Text = $"Current Stage: {WorldLawEngine.GetStageTitle(state.Narrative.CurrentStage)}";
-        }
-
-        if (saveMetaText is not null)
-        {
-            saveMetaText.Text =
-                $"Signals {state.Omen.History.Count}  Intents {state.Intent.SubmittedIntentCount}  Perception Uses {state.Perception.ActivationCount}";
-        }
-
-        if (settingsSummaryText is not null)
-        {
-            settingsSummaryText.Text =
-                $"Visual Mode: Ritual Flat  |  Pattern Veil: On  |  Perception Boost: {(state.Perception.IsActive ? "Active" : "Passive")}  |  Input Focus: {(state.Intent.TextInputEnabled ? "Narrative" : "Travel")}";
-        }
-
-        if (menuHintText is not null)
-        {
-            menuHintText.Text = "Esc / F10 opens the atlas. Use it as the game's systemic pause and reference layer.";
-        }
+        UpdateMeter(karmaMeter, viewState.KarmaMeter);
+        UpdateMeter(blessingMeter, viewState.BlessingMeter);
+        UpdateMeter(pathMeter, viewState.PathMeter);
+        UpdateMeter(dangerMeter, viewState.DangerMeter);
     }
 
     private Canvas BuildRoot()
@@ -221,215 +160,325 @@ public sealed class GameUiComposer
             Height = 1080f,
         };
 
-        Border overlay = CreateBorder(theme.BackgroundVeil, new Thickness(0f, 0f, 0f, 0f), 1920f, 1080f);
-        UIElementExtensions.SetCanvasRelativePosition(overlay, new Vector3(0f, 0f, 0f));
-        canvas.Children.Add(overlay);
+        Border veil = CreateBorder(theme.BackgroundVeil, theme.PanelBorder, new Thickness(0f, 0f, 0f, 0f), 1920f, 1080f);
+        UIElementExtensions.SetCanvasRelativePosition(veil, new Vector3(0f, 0f, 0f));
+        canvas.Children.Add(veil);
 
-        Border patternBand = CreateBorder(theme.BackgroundPattern, new Thickness(1f, 1f, 1f, 1f), 1920f, 180f);
-        UIElementExtensions.SetCanvasRelativePosition(patternBand, new Vector3(0f, 0f, 0f));
-        canvas.Children.Add(patternBand);
+        Border topBand = CreateBorder(theme.BackgroundPattern, theme.PanelBorder, new Thickness(0f, 0f, 0f, 0f), 1920f, 190f);
+        UIElementExtensions.SetCanvasRelativePosition(topBand, new Vector3(0f, 0f, 0f));
+        canvas.Children.Add(topBand);
 
-        Border headerPanel = CreateBorder(theme.PanelBase, new Thickness(2f, 2f, 2f, 2f), 780f, 176f);
-        UIElementExtensions.SetCanvasRelativePosition(headerPanel, new Vector3(0.04f, 0.04f, 0f));
+        Border headerPanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 234f);
+        UIElementExtensions.SetCanvasRelativePosition(headerPanel, new Vector3(0.04f, 0.05f, 0f));
         canvas.Children.Add(headerPanel);
 
-        StackPanel headerStack = new StackPanel
+        var headerStack = new StackPanel
         {
             Orientation = Orientation.Vertical,
-            Width = 720f,
-            Height = 152f,
-            Margin = new Thickness(24f, 16f, 24f, 16f),
+            Width = 780f,
+            Height = 188f,
+            Margin = new Thickness(28f, 20f, 28f, 20f),
         };
         headerPanel.Content = headerStack;
 
-        titleText = CreateText("", 40f, theme.AccentGold);
-        stageText = CreateText("", 18f, theme.TextPrimary);
+        modeTagBorder = CreateBorder(theme.AccentGold, theme.AccentGold, new Thickness(0f, 0f, 0f, 0f), 170f, 34f);
+        modeTagText = CreateText("", 15f, theme.PanelBase);
+        modeTagText.HorizontalAlignment = HorizontalAlignment.Center;
+        modeTagText.VerticalAlignment = VerticalAlignment.Center;
+        modeTagBorder.Content = modeTagText;
+        headerStack.Children.Add(modeTagBorder);
+
+        titleText = CreateText("", 42f, theme.TextPrimary);
+        subtitleText = CreateText("", 15f, theme.TextMuted);
+        subtitleText.WrapText = true;
+        subtitleText.Height = 42f;
+        stageText = CreateText("", 19f, theme.TextPrimary);
         biomeText = CreateText("", 16f, theme.TextMuted);
-        omenText = CreateText("", 15f, theme.TextPrimary);
         headerStack.Children.Add(titleText);
+        headerStack.Children.Add(subtitleText);
         headerStack.Children.Add(stageText);
         headerStack.Children.Add(biomeText);
-        headerStack.Children.Add(omenText);
 
-        Border rightPanel = CreateBorder(theme.PanelBase, new Thickness(2f, 2f, 2f, 2f), 540f, 196f);
-        UIElementExtensions.SetCanvasRelativePosition(rightPanel, new Vector3(0.68f, 0.04f, 0f));
-        canvas.Children.Add(rightPanel);
+        omenCalloutBorder = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 620f, 144f);
+        UIElementExtensions.SetCanvasRelativePosition(omenCalloutBorder, new Vector3(0.66f, 0.05f, 0f));
+        canvas.Children.Add(omenCalloutBorder);
 
-        StackPanel rightStack = new StackPanel
+        var omenStack = new StackPanel
         {
             Orientation = Orientation.Vertical,
-            Width = 492f,
-            Height = 164f,
-            Margin = new Thickness(24f, 18f, 24f, 14f),
+            Width = 568f,
+            Height = 100f,
+            Margin = new Thickness(24f, 20f, 24f, 20f),
         };
-        rightPanel.Content = rightStack;
+        omenCalloutBorder.Content = omenStack;
 
-        profileText = CreateText("", 15f, theme.TextPrimary);
+        omenStack.Children.Add(CreateText("Dominant Omen", 14f, theme.AccentGold));
+        omenText = CreateText("", 18f, theme.TextPrimary);
+        omenDetailText = CreateText("", 14f, theme.TextMuted);
+        omenDetailText.WrapText = true;
+        omenDetailText.Height = 44f;
+        omenStack.Children.Add(omenText);
+        omenStack.Children.Add(omenDetailText);
+
+        Border profilePanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 620f, 160f);
+        UIElementExtensions.SetCanvasRelativePosition(profilePanel, new Vector3(0.66f, 0.21f, 0f));
+        canvas.Children.Add(profilePanel);
+
+        var profileStack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Width = 568f,
+            Height = 116f,
+            Margin = new Thickness(24f, 20f, 24f, 20f),
+        };
+        profilePanel.Content = profileStack;
+
+        profileText = CreateText("", 14f, theme.TextPrimary);
+        profileText.WrapText = true;
+        profileText.Height = 40f;
         perceptionText = CreateText("", 15f, theme.AccentCyan);
-        intentText = CreateText("", 15f, theme.TextMuted);
-        rightStack.Children.Add(profileText);
-        rightStack.Children.Add(perceptionText);
-        rightStack.Children.Add(intentText);
+        intentText = CreateText("", 14f, theme.TextMuted);
+        profileStack.Children.Add(profileText);
+        profileStack.Children.Add(perceptionText);
+        profileStack.Children.Add(intentText);
 
-        Border bottomPanel = CreateBorder(theme.PanelElevated, new Thickness(2f, 2f, 2f, 2f), 1320f, 210f);
-        UIElementExtensions.SetCanvasRelativePosition(bottomPanel, new Vector3(0.04f, 0.78f, 0f));
+        Border metersPanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 194f);
+        UIElementExtensions.SetCanvasRelativePosition(metersPanel, new Vector3(0.04f, 0.28f, 0f));
+        canvas.Children.Add(metersPanel);
+
+        Grid meterGrid = new Grid
+        {
+            Width = 780f,
+            Height = 150f,
+            Margin = new Thickness(28f, 22f, 28f, 22f),
+        };
+
+        meterGrid.RowDefinitions.Add(new StripDefinition(StripType.Star, 1f));
+        meterGrid.RowDefinitions.Add(new StripDefinition(StripType.Star, 1f));
+        meterGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 1f));
+        meterGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 1f));
+        metersPanel.Content = meterGrid;
+
+        karmaMeter = CreateMeterCard(meterGrid, 0, 0);
+        blessingMeter = CreateMeterCard(meterGrid, 0, 1);
+        pathMeter = CreateMeterCard(meterGrid, 1, 0);
+        dangerMeter = CreateMeterCard(meterGrid, 1, 1);
+
+        Border narrativePanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 128f);
+        UIElementExtensions.SetCanvasRelativePosition(narrativePanel, new Vector3(0.04f, 0.48f, 0f));
+        canvas.Children.Add(narrativePanel);
+
+        var narrativeStack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Width = 780f,
+            Height = 84f,
+            Margin = new Thickness(28f, 18f, 28f, 18f),
+        };
+        narrativePanel.Content = narrativeStack;
+
+        narrativeTitleText = CreateText("Journey Logic", 15f, theme.AccentGold);
+        narrativeReasonText = CreateText("", 14f, theme.TextMuted);
+        narrativeReasonText.WrapText = true;
+        narrativeReasonText.Height = 52f;
+        narrativeStack.Children.Add(narrativeTitleText);
+        narrativeStack.Children.Add(narrativeReasonText);
+
+        Border bottomPanel = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 1320f, 256f);
+        UIElementExtensions.SetCanvasRelativePosition(bottomPanel, new Vector3(0.04f, 0.70f, 0f));
         canvas.Children.Add(bottomPanel);
 
         Grid bottomGrid = new Grid
         {
             Width = 1260f,
-            Height = 170f,
-            Margin = new Thickness(28f, 20f, 32f, 20f),
+            Height = 208f,
+            Margin = new Thickness(28f, 24f, 32f, 24f),
         };
-        bottomGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 0.72f));
-        bottomGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 0.28f));
+        bottomGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 0.73f));
+        bottomGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 0.27f));
         bottomPanel.Content = bottomGrid;
 
-        StackPanel inputStack = new StackPanel
+        var inputStack = new StackPanel
         {
             Orientation = Orientation.Vertical,
-            Width = 860f,
-            Height = 164f,
+            Width = 880f,
+            Height = 198f,
         };
         inputStack.DependencyProperties.Set(GridBase.ColumnPropertyKey, 0);
         bottomGrid.Children.Add(inputStack);
 
         helpText = CreateText("", 14f, theme.TextMuted);
-        inputStack.Children.Add(helpText);
-
         inputHintText = CreateText("", 15f, theme.TextPrimary);
         inputHintText.WrapText = true;
-        inputHintText.Height = 40f;
-        inputStack.Children.Add(inputHintText);
-
-        intentInputBorder = CreateBorder(theme.InputFill, new Thickness(2f, 2f, 2f, 2f), 860f, 66f);
-        inputStack.Children.Add(intentInputBorder);
-
+        inputHintText.Height = 42f;
+        intentInputBorder = CreateBorder(theme.InputFill, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 880f, 72f);
         intentInput = new EditText
         {
-            Width = 820f,
-            Height = 54f,
-            Margin = new Thickness(18f, 6f, 18f, 6f),
+            Width = 836f,
+            Height = 56f,
+            Margin = new Thickness(22f, 8f, 22f, 8f),
             Text = string.Empty,
             TextColor = theme.TextPrimary,
             SelectionColor = theme.AccentGold,
             CaretColor = theme.AccentCyan,
-            TextSize = 18f,
+            TextSize = 19f,
+            IsReadOnly = true,
         };
         intentInputBorder.Content = intentInput;
-
         lastIntentSummaryText = CreateText("", 14f, theme.TextMuted);
         lastIntentSummaryText.WrapText = true;
-        lastIntentSummaryText.Height = 36f;
+        lastIntentSummaryText.Height = 44f;
+
+        inputStack.Children.Add(helpText);
+        inputStack.Children.Add(inputHintText);
+        inputStack.Children.Add(intentInputBorder);
         inputStack.Children.Add(lastIntentSummaryText);
 
-        Border sideInfoPanel = CreateBorder(theme.PanelBase, new Thickness(2f, 2f, 2f, 2f), 340f, 164f);
-        sideInfoPanel.DependencyProperties.Set(GridBase.ColumnPropertyKey, 1);
-        bottomGrid.Children.Add(sideInfoPanel);
+        Border historyPanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 322f, 208f);
+        historyPanel.DependencyProperties.Set(GridBase.ColumnPropertyKey, 1);
+        bottomGrid.Children.Add(historyPanel);
 
-        logPanel = new StackPanel
+        var historyStack = new StackPanel
         {
             Orientation = Orientation.Vertical,
-            Width = 300f,
-            Height = 132f,
-            Margin = new Thickness(18f, 16f, 18f, 16f),
+            Width = 278f,
+            Height = 164f,
+            Margin = new Thickness(22f, 20f, 22f, 20f),
         };
-        sideInfoPanel.Content = logPanel;
+        historyPanel.Content = historyStack;
 
         historyTitleText = CreateText("Recent Signals", 16f, theme.AccentGold);
         historyEntryA = CreateText("", 14f, theme.TextPrimary);
         historyEntryA.WrapText = true;
-        historyEntryA.Height = 34f;
+        historyEntryA.Height = 40f;
         historyEntryB = CreateText("", 13f, theme.TextMuted);
         historyEntryB.WrapText = true;
-        historyEntryB.Height = 28f;
+        historyEntryB.Height = 34f;
         historyEntryC = CreateText("", 13f, theme.TextMuted);
         historyEntryC.WrapText = true;
-        historyEntryC.Height = 28f;
+        historyEntryC.Height = 34f;
 
-        logPanel.Children.Add(historyTitleText);
-        logPanel.Children.Add(historyEntryA);
-        logPanel.Children.Add(historyEntryB);
-        logPanel.Children.Add(historyEntryC);
+        historyStack.Children.Add(historyTitleText);
+        historyStack.Children.Add(historyEntryA);
+        historyStack.Children.Add(historyEntryB);
+        historyStack.Children.Add(historyEntryC);
 
-        Border narrativePanel = CreateBorder(theme.PanelBase, new Thickness(2f, 2f, 2f, 2f), 1320f, 112f);
-        UIElementExtensions.SetCanvasRelativePosition(narrativePanel, new Vector3(0.04f, 0.64f, 0f));
-        canvas.Children.Add(narrativePanel);
-
-        StackPanel narrativeStack = new StackPanel
-        {
-            Orientation = Orientation.Vertical,
-            Width = 1260f,
-            Height = 80f,
-            Margin = new Thickness(28f, 16f, 28f, 16f),
-        };
-        narrativePanel.Content = narrativeStack;
-
-        narrativeStack.Children.Add(CreateText("Journey Logic", 15f, theme.AccentGold));
-        narrativeReasonText = CreateText("", 14f, theme.TextMuted);
-        narrativeReasonText.WrapText = true;
-        narrativeStack.Children.Add(narrativeReasonText);
-
-        menuPanel = CreateBorder(theme.PanelElevated, new Thickness(2f, 2f, 2f, 2f), 620f, 420f);
-        UIElementExtensions.SetCanvasRelativePosition(menuPanel, new Vector3(0.50f, 0.18f, 0f));
+        menuPanel = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 664f, 468f);
+        UIElementExtensions.SetCanvasRelativePosition(menuPanel, new Vector3(0.48f, 0.17f, 0f));
         menuPanel.Visibility = Visibility.Collapsed;
         canvas.Children.Add(menuPanel);
 
-        StackPanel menuStack = new StackPanel
+        var menuStack = new StackPanel
         {
             Orientation = Orientation.Vertical,
-            Width = 560f,
-            Height = 372f,
-            Margin = new Thickness(28f, 22f, 28f, 22f),
+            Width = 604f,
+            Height = 418f,
+            Margin = new Thickness(30f, 24f, 30f, 24f),
         };
         menuPanel.Content = menuStack;
 
-        menuTitleText = CreateText("System Atlas", 26f, theme.AccentGold);
-        saveSlotText = CreateText("", 16f, theme.TextPrimary);
-        saveMetaText = CreateText("", 14f, theme.TextMuted);
-        settingsSummaryText = CreateText("", 14f, theme.TextPrimary);
-        settingsSummaryText.WrapText = true;
+        menuTitleText = CreateText("System Atlas", 28f, theme.AccentGold);
+        menuStageText = CreateText("", 16f, theme.TextPrimary);
+        menuMetaText = CreateText("", 14f, theme.TextMuted);
+        menuSettingsText = CreateText("", 14f, theme.TextPrimary);
+        menuSettingsText.WrapText = true;
+        menuSettingsText.Height = 44f;
         menuHintText = CreateText("", 13f, theme.TextMuted);
         menuHintText.WrapText = true;
+        menuHintText.Height = 38f;
 
         menuStack.Children.Add(menuTitleText);
-        menuStack.Children.Add(saveSlotText);
-        menuStack.Children.Add(saveMetaText);
-        menuStack.Children.Add(settingsSummaryText);
+        menuStack.Children.Add(menuStageText);
+        menuStack.Children.Add(menuMetaText);
+        menuStack.Children.Add(menuSettingsText);
         menuStack.Children.Add(menuHintText);
 
-        StackPanel buttonRow = new StackPanel
+        var buttonRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Width = 560f,
-            Height = 72f,
-            Margin = new Thickness(0f, 18f, 0f, 0f),
+            Width = 604f,
+            Height = 56f,
+            Margin = new Thickness(0f, 24f, 0f, 0f),
         };
         menuStack.Children.Add(buttonRow);
 
-        menuToggleButton = CreateButton("Toggle Atlas");
-        focusIntentButton = CreateButton("Intent Focus");
-        toggleHudButton = CreateButton("Debug HUD");
+        menuToggleButton = CreateButton("Open Atlas");
+        narrativeInputButton = CreateButton("Enable Input");
+        debugHudButton = CreateButton("Show Debug HUD");
         menuToggleButton.Click += HandleMenuToggleClicked;
-        focusIntentButton.Click += HandleIntentFocusClicked;
-        toggleHudButton.Click += HandleToggleHudClicked;
+        narrativeInputButton.Click += HandleNarrativeInputClicked;
+        debugHudButton.Click += HandleDebugHudClicked;
         buttonRow.Children.Add(menuToggleButton);
-        buttonRow.Children.Add(focusIntentButton);
-        buttonRow.Children.Add(toggleHudButton);
+        buttonRow.Children.Add(narrativeInputButton);
+        buttonRow.Children.Add(debugHudButton);
 
         return canvas;
     }
 
-    private Border CreateBorder(Color fill, Thickness borderThickness, float width, float height)
+    private GameUiMeterWidgets CreateMeterCard(Grid parent, int row, int column)
+    {
+        Border card = CreateBorder(theme.PanelOrnament, theme.PanelBorder, new Thickness(1f, 1f, 1f, 1f), 374f, 64f);
+        card.DependencyProperties.Set(GridBase.RowPropertyKey, row);
+        card.DependencyProperties.Set(GridBase.ColumnPropertyKey, column);
+        parent.Children.Add(card);
+
+        var stack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Width = 330f,
+            Height = 48f,
+            Margin = new Thickness(18f, 8f, 18f, 8f),
+        };
+        card.Content = stack;
+
+        Grid lineGrid = new Grid
+        {
+            Width = 330f,
+            Height = 20f,
+        };
+        lineGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 0.7f));
+        lineGrid.ColumnDefinitions.Add(new StripDefinition(StripType.Star, 0.3f));
+        stack.Children.Add(lineGrid);
+
+        TextBlock label = CreateText("", 14f, theme.TextPrimary);
+        TextBlock value = CreateText("", 13f, theme.TextMuted);
+        value.DependencyProperties.Set(GridBase.ColumnPropertyKey, 1);
+        lineGrid.Children.Add(label);
+        lineGrid.Children.Add(value);
+
+        Grid meterTrack = new Grid
+        {
+            Width = 330f,
+            Height = 10f,
+            BackgroundColor = theme.InputFill,
+            Margin = new Thickness(0f, 6f, 0f, 6f),
+        };
+        Border meterFill = new Border
+        {
+            Width = 0f,
+            Height = 10f,
+            BackgroundColor = theme.AccentGold,
+            BorderThickness = new Thickness(0f, 0f, 0f, 0f),
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+        meterTrack.Children.Add(meterFill);
+        stack.Children.Add(meterTrack);
+
+        TextBlock summary = CreateText("", 12f, theme.TextMuted);
+        stack.Children.Add(summary);
+
+        return new GameUiMeterWidgets(label, value, summary, meterFill, 330f);
+    }
+
+    private Border CreateBorder(Color fill, Color borderColor, Thickness borderThickness, float width, float height)
     {
         return new Border
         {
             Width = width,
             Height = height,
             BackgroundColor = fill,
-            BorderColor = theme.PanelBorder,
+            BorderColor = borderColor,
             BorderThickness = borderThickness,
-            Padding = new Thickness(0f, 0f, 0f, 0f),
         };
     }
 
@@ -447,7 +496,7 @@ public sealed class GameUiComposer
     {
         return new Button
         {
-            Width = 170f,
+            Width = 182f,
             Height = 52f,
             Margin = new Thickness(0f, 0f, 14f, 0f),
             Content = CreateText(label, 15f, theme.TextPrimary),
@@ -456,51 +505,70 @@ public sealed class GameUiComposer
         };
     }
 
-    public void ToggleMenu()
+    private static void SetText(TextBlock? textBlock, string value)
     {
-        menuVisible = !menuVisible;
-        if (menuPanel is not null)
+        if (textBlock is not null)
         {
-            menuPanel.Visibility = menuVisible ? Visibility.Visible : Visibility.Collapsed;
+            textBlock.Text = value;
         }
+    }
+
+    private static void SetButtonText(Button? button, string value)
+    {
+        if (button?.Content is TextBlock textBlock)
+        {
+            textBlock.Text = value;
+        }
+    }
+
+    private static void UpdateMeter(GameUiMeterWidgets? widgets, GameUiMeterViewState value)
+    {
+        if (widgets is null)
+        {
+            return;
+        }
+
+        widgets.Label.Text = value.LabelText;
+        widgets.Value.Text = value.ValueText;
+        widgets.Summary.Text = value.SummaryText;
+        widgets.Fill.BackgroundColor = value.FillColor;
+        widgets.Fill.Width = widgets.TrackWidth * MathUtil.Clamp(value.FillRatio, 0f, 1f);
     }
 
     private void HandleMenuToggleClicked(object? sender, RoutedEventArgs e)
     {
-        ToggleMenu();
+        commandSink?.ToggleUiMenu();
     }
 
-    private void HandleIntentFocusClicked(object? sender, RoutedEventArgs e)
+    private void HandleNarrativeInputClicked(object? sender, RoutedEventArgs e)
     {
-        if (worldLawController is null)
-        {
-            return;
-        }
-
-        bool next = !worldLawController.RuntimeState.Intent.TextInputEnabled;
-        worldLawController.SetIntentTextInputEnabled(next);
+        commandSink?.ToggleNarrativeInput();
     }
 
-    private void HandleToggleHudClicked(object? sender, RoutedEventArgs e)
+    private void HandleDebugHudClicked(object? sender, RoutedEventArgs e)
     {
-        if (worldLawController is null)
-        {
-            return;
-        }
-
-        worldLawController.SetDebugHudVisible(!worldLawController.IsDebugHudVisible);
+        commandSink?.ToggleDebugHud();
     }
 
-    private static string FormatHistoryLine(WorldLawRuntimeState state, int index)
+    private sealed class GameUiMeterWidgets
     {
-        if (state.Omen.History.Count <= index)
+        public GameUiMeterWidgets(TextBlock label, TextBlock value, TextBlock summary, Border fill, float trackWidth)
         {
-            return index == 0
-                ? "No major omen has resolved into visible history yet."
-                : string.Empty;
+            Label = label;
+            Value = value;
+            Summary = summary;
+            Fill = fill;
+            TrackWidth = trackWidth;
         }
 
-        OmenRecord omen = state.Omen.History[state.Omen.History.Count - 1 - index];
-        return $"{WorldLawEngine.GetOmenTitle(omen.OmenType)}  {omen.Score * 100f:0}%  {omen.Source}";
+        public TextBlock Label { get; }
+
+        public TextBlock Value { get; }
+
+        public TextBlock Summary { get; }
+
+        public Border Fill { get; }
+
+        public float TrackWidth { get; }
     }
 }

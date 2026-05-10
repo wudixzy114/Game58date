@@ -1,0 +1,81 @@
+!SceneAsset
+Id: 4be86ea6-8504-4ff2-91e0-870e7469b8ce
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! eab2afd5-e2ff-45ab-b9de-e618ec536dac
+        - ref!! 699d7c90-351b-413f-88c8-f77c5d4d2074
+        - ref!! 718cebff-83ff-47b4-b43d-d0d3825823b6
+        - ref!! 995af65d-caa4-4b1a-8fcb-6287c4a2f7da
+    Parts:
+        -   Entity:
+                Id: eab2afd5-e2ff-45ab-b9de-e618ec536dac
+                Name: Camera
+                Components:
+                    d5ef0bbbf9cb8f44861d123fec1831ef: !TransformComponent
+                        Id: bb0befd5-cbf9-448f-861d-123fec1831ef
+                        Position: {X: 0.0, Y: 0.0, Z: 12.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    708718b75e0c8441a4bd90f917166701: !CameraComponent
+                        Id: b7188770-0c5e-4184-a4bd-90f917166701
+                        Name: null
+                        Projection: Orthographic
+                        FarClipPlane: 50.0
+                        OrthographicSize: 10.8
+                        Slot: 9f0cd3ca-14a1-4b7c-b952-58ac4ebd4c77
+        -   Entity:
+                Id: 699d7c90-351b-413f-88c8-f77c5d4d2074
+                Name: Ambient light
+                Components:
+                    e7da1dc3e74d25459e66e6c8cabfd9a6: !TransformComponent
+                        Id: c31ddae7-4de7-4525-9e66-e6c8cabfd9a6
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    ffc6728d9bc4c84aa7ad19768ee3188f: !LightComponent
+                        Id: 8d72c6ff-c49b-4ac8-a7ad-19768ee3188f
+                        Type: !LightAmbient
+                            Color: !ColorRgbProvider
+                                Value: {R: 1.0, G: 1.0, B: 1.0}
+                        Intensity: 1.0
+        -   Entity:
+                Id: 718cebff-83ff-47b4-b43d-d0d3825823b6
+                Name: Skybox
+                Components:
+                    d4f7411c27db4a47a0078336e2a9d302: !TransformComponent
+                        Id: 1c41f7d4-db27-474a-a007-8336e2a9d302
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    2bfc9d5b3184c34e8bb983b129562db1: !BackgroundComponent
+                        Id: 5b9dfc2b-8431-4ec3-8bb9-83b129562db1
+                        Texture: 74440674-2252-4fc3-a9b3-6403891677ee:Skybox texture
+                    6d27f5ac14f0d847941935739aa8f1c2: !LightComponent
+                        Id: acf5276d-f014-47d8-9419-35739aa8f1c2
+                        Type: !LightSkybox
+                            Skybox: 604d25b8-6a6e-4cd4-876c-9fe8be4df36b:Skybox
+        -   Entity:
+                Id: 995af65d-caa4-4b1a-8fcb-6287c4a2f7da
+                Name: DevRouterRuntime
+                Components:
+                    4d07aeb77a2f4247b3a6e02dc18d2895: !TransformComponent
+                        Id: b7ae074d-2f7a-4742-b3a6-e02dc18d2895
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    b7d8bba264e58f41bf25ff936e8a7ed5: !Game58date.Gameplay.DevSceneRouterScript,Game58date
+                        Id: a2bbd8b7-e564-418f-bf25-ff936e8a7ed5
+                    ec9d1d8d6d4e844e8d369acfd95849a6: !UIComponent
+                        Id: 8d1d9dec-4e6d-4e84-8d36-9acfd95849a6
+                        Page: null
+                        Resolution: {X: 1920.0, Y: 1080.0, Z: 1000.0}
+                        Size: {X: 1.0, Y: 1.0, Z: 1.0}
+                        ResolutionStretch: FixedWidthFixedHeight

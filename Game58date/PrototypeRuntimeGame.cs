@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Game58date.Gameplay;
+using Stride.Core.Serialization.Contents;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Games;
@@ -13,6 +14,8 @@ namespace Game58date;
 
 public sealed class PrototypeRuntimeGame : Game
 {
+    public static RuntimeLaunchTarget? PendingLaunchTarget { get; set; }
+
     private TimeSpan fullscreenAttemptDelay = TimeSpan.FromMilliseconds(150);
     private bool hasAppliedFullscreen;
     private Int2 lastWindowedSize = new(1280, 720);
@@ -22,7 +25,12 @@ public sealed class PrototypeRuntimeGame : Game
         await base.LoadContent();
 
         ConfigureWindowForGameplay();
-        RuntimeMode runtimeMode = RuntimeModeResolver.Resolve();
+        RuntimeMode runtimeMode = ResolveRuntimeMode();
+        if (runtimeMode == RuntimeMode.UiShowcase)
+        {
+            LoadUiShowcaseScene();
+            return;
+        }
 
         var scene = SceneSystem.SceneInstance.RootScene;
         if (scene is null)
@@ -181,5 +189,33 @@ public sealed class PrototypeRuntimeGame : Game
     {
         Rectangle bounds = Window.ClientBounds;
         return new Int2(Math.Max(bounds.Width, 1), Math.Max(bounds.Height, 1));
+    }
+
+    private void LoadUiShowcaseScene()
+    {
+        IContentManager? content = Services.GetService<IContentManager>();
+        if (content is null)
+        {
+            throw new InvalidOperationException("IContentManager service is unavailable.");
+        }
+
+        SceneSystem.SceneInstance.RootScene = content.Load<Scene>("UIShowcaseScene");
+    }
+
+    private static RuntimeMode ResolveRuntimeMode()
+    {
+        if (PendingLaunchTarget.HasValue)
+        {
+            RuntimeLaunchTarget target = PendingLaunchTarget.Value;
+            PendingLaunchTarget = null;
+            return target switch
+            {
+                RuntimeLaunchTarget.Prototype => RuntimeMode.Prototype,
+                RuntimeLaunchTarget.UiShowcase => RuntimeMode.UiShowcase,
+                _ => RuntimeMode.Terrain,
+            };
+        }
+
+        return RuntimeModeResolver.Resolve();
     }
 }

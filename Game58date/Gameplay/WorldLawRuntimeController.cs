@@ -43,6 +43,8 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
     public bool IsDebugHudVisible => hudVisible;
 
+    public string CurrentIntentDraftText => intentBuffer.ToString();
+
     public void Initialize(WorldLawRuntimeState initialState, Entity camera, Entity? directionalLight)
     {
         if (Engine is not null)

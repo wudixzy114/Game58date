@@ -7,6 +7,7 @@ public enum RuntimeMode
 {
     Terrain = 0,
     Prototype = 1,
+    UiShowcase = 2,
 }
 
 public static class RuntimeModeResolver
@@ -24,6 +25,8 @@ public static class RuntimeModeResolver
         return raw.Trim().ToLowerInvariant() switch
         {
             "prototype" => RuntimeMode.Prototype,
+            "ui-showcase" => RuntimeMode.UiShowcase,
+            "uishowcase" => RuntimeMode.UiShowcase,
             "terrain" => RuntimeMode.Terrain,
             _ => RuntimeMode.Terrain,
         };
