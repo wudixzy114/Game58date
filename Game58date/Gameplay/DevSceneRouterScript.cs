@@ -46,6 +46,14 @@ public sealed class DevSceneRouterScript : SyncScript
 
     public override void Start()
     {
+        selectedIndex = 0;
+        isLoading = false;
+        wasUpPressed = false;
+        wasDownPressed = false;
+        wasWPressed = false;
+        wasSPressed = false;
+        wasEnterPressed = false;
+        wasSpacePressed = false;
         Game.IsMouseVisible = true;
         font = GameUiFontProvider.Load(Services);
         EnsureUi();

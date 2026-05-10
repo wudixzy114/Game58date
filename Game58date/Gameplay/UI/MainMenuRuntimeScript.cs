@@ -32,6 +32,13 @@ public sealed class MainMenuRuntimeScript : SyncScript, IMainMenuActionSink
 
     public override void Start()
     {
+        pulseSeconds = 0f;
+        selectedIndex = 0;
+        wasUpPressed = false;
+        wasDownPressed = false;
+        wasEnterPressed = false;
+        wasSpacePressed = false;
+        wasEscapePressed = false;
         composer = new MainMenuComposer(theme, Services, this);
         composer.Attach(Entity);
 
