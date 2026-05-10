@@ -56,7 +56,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         var generator = new TerrainChunkGenerator(settings, overrideStore);
         var mesher = new VoxelChunkMesher(settings);
         var modelFactory = new VoxelChunkModelFactory(Game.GraphicsDevice, Game.GraphicsContext, content);
-        var environmentVisualFactory = new EnvironmentVisualFactory(Game.GraphicsDevice);
+        var environmentVisualFactory = new EnvironmentVisualFactory(Game.GraphicsDevice, content);
         var environmentDecorator = new TerrainEnvironmentDecorator(settings, generator, environmentVisualFactory);
         worldRuntime = new VoxelTerrainWorldRuntime(settings, overrideStore, generator, mesher, modelFactory, environmentDecorator);
 

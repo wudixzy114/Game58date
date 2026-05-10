@@ -45,8 +45,8 @@ public sealed class TerrainEnvironmentRuleSet
                 MaxTemperature: 1f,
                 RequiresSoftGround: false,
                 AllowsWaterAdjacency: true,
-                NearVariant: new EnvironmentPropVariant(EnvironmentPropKind.ReedPatch, EnvironmentLodLevel.Near, "ReedPatch", 1.1f, 1.0f, 1.0f, false, false, 0f, 0.32f, 0f, 1f, 0.35f, 1f, new Vector3(0.18f, 0f, 0.18f), new Vector3(0.02f, 0.11f, 0.03f), new Vector3(0f, 0.01f, 0f), 1.35f),
-                MidVariant: new EnvironmentPropVariant(EnvironmentPropKind.ReedPatch, EnvironmentLodLevel.Mid, "ReedPatchMid", 0.95f, 0.75f, 0.75f, false, false, 0f, 0.32f, 0f, 1f, 0.35f, 1f, new Vector3(0.12f, 0f, 0.12f), new Vector3(0.01f, 0.07f, 0.02f), new Vector3(0f, 0.008f, 0f), 1.0f)),
+                NearVariant: new EnvironmentPropVariant(EnvironmentPropKind.ReedPatch, EnvironmentLodLevel.Near, "ReedPatch", new EnvironmentAssetDescriptor("env/reed_patch_near", EnvironmentMaterialKind.Reed), 1.1f, 1.0f, 1.0f, false, false, 0f, 0.32f, 0f, 1f, 0.35f, 1f, new Vector3(0.18f, 0f, 0.18f), new Vector3(0.02f, 0.11f, 0.03f), new Vector3(0f, 0.01f, 0f), 1.35f),
+                MidVariant: new EnvironmentPropVariant(EnvironmentPropKind.ReedPatch, EnvironmentLodLevel.Mid, "ReedPatchMid", new EnvironmentAssetDescriptor("env/reed_patch_mid", EnvironmentMaterialKind.Reed), 0.95f, 0.75f, 0.75f, false, false, 0f, 0.32f, 0f, 1f, 0.35f, 1f, new Vector3(0.12f, 0f, 0.12f), new Vector3(0.01f, 0.07f, 0.02f), new Vector3(0f, 0.008f, 0f), 1.0f)),
 
             new(
                 "wetland_growth",
@@ -65,8 +65,8 @@ public sealed class TerrainEnvironmentRuleSet
                 MaxTemperature: 0.95f,
                 RequiresSoftGround: false,
                 AllowsWaterAdjacency: true,
-                NearVariant: new EnvironmentPropVariant(EnvironmentPropKind.WetlandTree, EnvironmentLodLevel.Near, "WetlandTree", 1.8f, 1.0f, 0.65f, false, false, 0f, 0.24f, 0.18f, 0.95f, 0.60f, 1f, new Vector3(0.20f, 0f, 0.20f), new Vector3(0.02f, 0.09f, 0.02f), new Vector3(0f, 0.05f, 0f), 0.96f),
-                MidVariant: new EnvironmentPropVariant(EnvironmentPropKind.ReedPatch, EnvironmentLodLevel.Mid, "WetlandReedMid", 1.0f, 0.85f, 1.0f, false, false, 0f, 0.24f, 0.18f, 0.95f, 0.60f, 1f, new Vector3(0.18f, 0f, 0.18f), new Vector3(0.01f, 0.07f, 0.02f), new Vector3(0f, 0.01f, 0f), 1.10f)),
+                NearVariant: new EnvironmentPropVariant(EnvironmentPropKind.WetlandTree, EnvironmentLodLevel.Near, "WetlandTree", new EnvironmentAssetDescriptor("env/wetland_tree_near", EnvironmentMaterialKind.Bark), 1.8f, 1.0f, 0.65f, false, false, 0f, 0.24f, 0.18f, 0.95f, 0.60f, 1f, new Vector3(0.20f, 0f, 0.20f), new Vector3(0.02f, 0.09f, 0.02f), new Vector3(0f, 0.05f, 0f), 0.96f),
+                MidVariant: new EnvironmentPropVariant(EnvironmentPropKind.ReedPatch, EnvironmentLodLevel.Mid, "WetlandReedMid", new EnvironmentAssetDescriptor("env/wetland_reed_mid", EnvironmentMaterialKind.Reed), 1.0f, 0.85f, 1.0f, false, false, 0f, 0.24f, 0.18f, 0.95f, 0.60f, 1f, new Vector3(0.18f, 0f, 0.18f), new Vector3(0.01f, 0.07f, 0.02f), new Vector3(0f, 0.01f, 0f), 1.10f)),
 
             new(
                 "woodland_canopy",

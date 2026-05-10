@@ -1,8 +1,10 @@
 #nullable enable
 using System;
 using Game58date.Gameplay;
+using Stride.Core.Serialization.Contents;
 using Stride.Core.Mathematics;
 using Stride.Engine;
+using Stride.Particles;
 
 namespace Game58date.Terrain;
 
@@ -11,11 +13,14 @@ public sealed class WeatherAmbienceController : SyncScript
     private const int ParticleCount = 28;
 
     private readonly WeatherParticleSlot[] particles = new WeatherParticleSlot[ParticleCount];
+    private readonly WeatherEffectLibrary effectLibrary = new();
+    private readonly System.Collections.Generic.Dictionary<string, ParticleSystem?> particleSystemCache = new();
     private VoxelTerrainWorldRuntime? worldRuntime;
     private EnvironmentVisualFactory? visualFactory;
     private Entity? cameraEntity;
     private WorldLawRuntimeController? worldLawController;
     private Entity? weatherRoot;
+    private IContentManager? content;
     private WeatherKind currentWeather = WeatherKind.Clear;
     private float elapsedSeconds;
     private bool isInitialized;
@@ -40,6 +45,7 @@ public sealed class WeatherAmbienceController : SyncScript
             throw new InvalidOperationException("Weather ambience controller must be initialized before Start.");
         }
 
+        content = Services.GetService<IContentManager>();
         weatherRoot ??= new Entity("WeatherAmbience");
         Entity.AddChild(weatherRoot);
 
@@ -146,17 +152,59 @@ public sealed class WeatherAmbienceController : SyncScript
             return;
         }
 
-        EnvironmentMaterialKind materialKind = weatherKind switch
-        {
-            WeatherKind.Rain => EnvironmentMaterialKind.Rain,
-            WeatherKind.Snow => EnvironmentMaterialKind.Snow,
-            WeatherKind.Fog => EnvironmentMaterialKind.Fog,
-            _ => EnvironmentMaterialKind.Dust,
-        };
+        WeatherEffectDescriptor descriptor = effectLibrary.Get(weatherKind);
+        bool particleAssetReady = TryResolveParticleEffect(descriptor);
+        SetFallbackParticleVisibility(true);
+        EnvironmentMaterialKind materialKind = descriptor.FallbackMaterial;
 
         foreach (WeatherParticleSlot particle in particles)
         {
             visualFactory.ApplyBoxModel(particle.Entity, materialKind);
+        }
+
+        if (particleAssetReady)
+        {
+            TerrainRuntimeLogger.Logger.Debug($"Weather particle asset ready for {descriptor.Weather}: {descriptor.ParticleAssetKey}");
+        }
+    }
+
+    private bool TryResolveParticleEffect(WeatherEffectDescriptor descriptor)
+    {
+        if (descriptor.UsesPlaceholderGeometry || content is null || string.IsNullOrWhiteSpace(descriptor.ParticleAssetKey))
+        {
+            return false;
+        }
+
+        if (!particleSystemCache.TryGetValue(descriptor.ParticleAssetKey, out ParticleSystem? particleSystem))
+        {
+            try
+            {
+                particleSystem = content.Load<ParticleSystem>(descriptor.ParticleAssetKey);
+            }
+            catch
+            {
+                particleSystem = null;
+            }
+
+            particleSystemCache[descriptor.ParticleAssetKey] = particleSystem;
+        }
+
+        if (particleSystem is null)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void SetFallbackParticleVisibility(bool visible)
+    {
+        foreach (WeatherParticleSlot particle in particles)
+        {
+            if (!visible)
+            {
+                particle.Entity.Transform.Scale = Vector3.Zero;
+            }
         }
     }
 

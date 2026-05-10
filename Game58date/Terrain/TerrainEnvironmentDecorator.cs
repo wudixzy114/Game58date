@@ -221,9 +221,9 @@ public sealed class TerrainEnvironmentDecorator
     {
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
-        root.AddChild(visualFactory.CreateBoxEntity("Trunk", EnvironmentMaterialKind.Bark, new Vector3(0f, 1.25f * scale, 0f), new Vector3(0.42f, 2.5f * scale, 0.42f)));
-        root.AddChild(visualFactory.CreateBoxEntity("CanopyA", EnvironmentMaterialKind.Leaf, new Vector3(0f, 3.25f * scale, 0f), new Vector3(1.85f * scale, 1.45f * scale, 1.85f * scale)));
-        root.AddChild(visualFactory.CreateBoxEntity("CanopyB", EnvironmentMaterialKind.Leaf, new Vector3(0.35f * scale, 4.15f * scale, -0.15f * scale), new Vector3(1.15f * scale, 0.95f * scale, 1.15f * scale)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("Trunk", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/trunk", EnvironmentMaterialKind.Bark), new Vector3(0f, 1.25f * scale, 0f), new Vector3(0.42f, 2.5f * scale, 0.42f)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("CanopyA", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/canopy_a", EnvironmentMaterialKind.Leaf), new Vector3(0f, 3.25f * scale, 0f), new Vector3(1.85f * scale, 1.45f * scale, 1.85f * scale)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("CanopyB", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/canopy_b", EnvironmentMaterialKind.Leaf), new Vector3(0.35f * scale, 4.15f * scale, -0.15f * scale), new Vector3(1.15f * scale, 0.95f * scale, 1.15f * scale)));
         AttachMotion(root, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
         return root;
     }
@@ -232,10 +232,10 @@ public sealed class TerrainEnvironmentDecorator
     {
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name, placement.LocalPosition, placement.YawRadians);
-        root.AddChild(visualFactory.CreateBoxEntity("Trunk", EnvironmentMaterialKind.Bark, new Vector3(0f, 1.5f * scale, 0f), new Vector3(0.35f, 3.0f * scale, 0.35f)));
-        root.AddChild(visualFactory.CreateBoxEntity("NeedlesA", EnvironmentMaterialKind.Needle, new Vector3(0f, 2.25f * scale, 0f), new Vector3(1.30f * scale, 1.00f * scale, 1.30f * scale)));
-        root.AddChild(visualFactory.CreateBoxEntity("NeedlesB", EnvironmentMaterialKind.Needle, new Vector3(0f, 3.35f * scale, 0f), new Vector3(1.00f * scale, 0.95f * scale, 1.00f * scale)));
-        root.AddChild(visualFactory.CreateBoxEntity("NeedlesC", EnvironmentMaterialKind.Needle, new Vector3(0f, 4.20f * scale, 0f), new Vector3(0.66f * scale, 0.78f * scale, 0.66f * scale)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("Trunk", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/trunk", EnvironmentMaterialKind.Bark), new Vector3(0f, 1.5f * scale, 0f), new Vector3(0.35f, 3.0f * scale, 0.35f)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("NeedlesA", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/needles_a", EnvironmentMaterialKind.Needle), new Vector3(0f, 2.25f * scale, 0f), new Vector3(1.30f * scale, 1.00f * scale, 1.30f * scale)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("NeedlesB", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/needles_b", EnvironmentMaterialKind.Needle), new Vector3(0f, 3.35f * scale, 0f), new Vector3(1.00f * scale, 0.95f * scale, 1.00f * scale)));
+        root.AddChild(visualFactory.CreateEnvironmentEntity("NeedlesC", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/needles_c", EnvironmentMaterialKind.Needle), new Vector3(0f, 4.20f * scale, 0f), new Vector3(0.66f * scale, 0.78f * scale, 0.66f * scale)));
         AttachMotion(root, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
         return root;
     }

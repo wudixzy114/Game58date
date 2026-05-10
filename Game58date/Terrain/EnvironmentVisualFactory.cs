@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Stride.Core;
 using Stride.Core.Mathematics;
+using Stride.Core.Serialization.Contents;
 using Stride.Graphics;
 using Stride.Rendering;
 using Stride.Rendering.Materials;
@@ -13,12 +14,15 @@ namespace Game58date.Terrain;
 public sealed class EnvironmentVisualFactory
 {
     private readonly GraphicsDevice graphicsDevice;
+    private readonly IContentManager? content;
     private readonly Dictionary<EnvironmentMaterialKind, Material> materials = new();
     private readonly Dictionary<EnvironmentMaterialKind, Model> boxModels = new();
+    private readonly Dictionary<string, Prefab?> prefabCache = new();
 
-    public EnvironmentVisualFactory(GraphicsDevice graphicsDevice)
+    public EnvironmentVisualFactory(GraphicsDevice graphicsDevice, IContentManager? content = null)
     {
         this.graphicsDevice = graphicsDevice;
+        this.content = content;
     }
 
     public Entity CreateBoxEntity(
@@ -38,6 +42,70 @@ public sealed class EnvironmentVisualFactory
 
         entity.Add(new ModelComponent(GetBoxModel(materialKind)));
         return entity;
+    }
+
+    public Entity CreateEnvironmentEntity(
+        string name,
+        EnvironmentAssetDescriptor asset,
+        Vector3 localPosition,
+        Vector3 localScale,
+        Vector3? localRotationEuler = null)
+    {
+        if (TryCreatePrefabEntity(name, asset, localPosition, localScale, localRotationEuler, out Entity? prefabEntity))
+        {
+            return prefabEntity!;
+        }
+
+        return CreateBoxEntity(name, asset.FallbackMaterial, localPosition, localScale, localRotationEuler);
+    }
+
+    private bool TryCreatePrefabEntity(
+        string name,
+        EnvironmentAssetDescriptor asset,
+        Vector3 localPosition,
+        Vector3 localScale,
+        Vector3? localRotationEuler,
+        out Entity? entity)
+    {
+        entity = null;
+        if (asset.UsesPlaceholderGeometry || content is null || string.IsNullOrWhiteSpace(asset.AssetKey))
+        {
+            return false;
+        }
+
+        if (!prefabCache.TryGetValue(asset.AssetKey, out Prefab? prefab))
+        {
+            try
+            {
+                prefab = content.Load<Prefab>(asset.AssetKey);
+            }
+            catch
+            {
+                prefab = null;
+            }
+
+            prefabCache[asset.AssetKey] = prefab;
+        }
+
+        if (prefab is null)
+        {
+            return false;
+        }
+
+        entity = new Entity(name);
+        entity.Transform.Position = localPosition;
+        entity.Transform.Scale = localScale;
+        if (localRotationEuler.HasValue)
+        {
+            entity.Transform.RotationEulerXYZ = localRotationEuler.Value;
+        }
+
+        foreach (Entity child in prefab.Instantiate())
+        {
+            entity.AddChild(child);
+        }
+
+        return true;
     }
 
     public void ApplyBoxModel(Entity entity, EnvironmentMaterialKind materialKind)
