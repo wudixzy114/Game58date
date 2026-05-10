@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: 5e0c3060-1bb5-48d3-a870-4da9a57259f8
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 1.0, Y: 1.0, Z: 1.0}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.0, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 43dc5554-7325-4459-9ebf-f73810708d17:Env/Materials/RuinStone

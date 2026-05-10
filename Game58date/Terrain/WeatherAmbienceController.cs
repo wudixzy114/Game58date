@@ -5,7 +5,6 @@ using Game58date.Gameplay;
 using Stride.Core.Serialization.Contents;
 using Stride.Core.Mathematics;
 using Stride.Engine;
-using Stride.Particles;
 using Stride.Rendering.Compositing;
 using Stride.Rendering.Images;
 using Stride.Rendering.Lights;
@@ -19,7 +18,7 @@ public sealed class WeatherAmbienceController : SyncScript
     private readonly WeatherParticleSlot[] particles = new WeatherParticleSlot[ParticleCount];
     private readonly WeatherEffectLibrary effectLibrary = new();
     private readonly WeatherStateResolver weatherStateResolver = new();
-    private readonly Dictionary<string, ParticleSystem?> particleSystemCache = new();
+    private readonly Dictionary<string, Prefab?> effectPrefabCache = new();
     private readonly List<ForwardRenderer> forwardRenderers = new();
     private readonly WeatherRuntimeState runtimeState = CreateDefaultState();
     private readonly WeatherRuntimeState sourceState = CreateDefaultState();
@@ -34,6 +33,8 @@ public sealed class WeatherAmbienceController : SyncScript
     private Color3 baseLightColor = new(1.0f, 0.98f, 0.94f);
     private float baseLightIntensity = 14f;
     private WeatherKind materialWeather = WeatherKind.Clear;
+    private Entity? activeWeatherEffectEntity;
+    private string? activeWeatherEffectKey;
     private float elapsedSeconds;
     private float transitionProgress = 1f;
     private bool isInitialized;
@@ -201,8 +202,8 @@ public sealed class WeatherAmbienceController : SyncScript
         }
 
         WeatherEffectDescriptor descriptor = effectLibrary.Get(weatherKind);
-        bool particleAssetReady = TryResolveParticleEffect(descriptor);
-        SetFallbackParticleVisibility(true);
+        bool prefabReady = TryActivateWeatherEffectPrefab(descriptor);
+        SetFallbackParticleVisibility(!prefabReady);
         EnvironmentMaterialKind materialKind = descriptor.FallbackMaterial;
 
         foreach (WeatherParticleSlot particle in particles)
@@ -210,47 +211,85 @@ public sealed class WeatherAmbienceController : SyncScript
             visualFactory.ApplyBoxModel(particle.Entity, materialKind);
         }
 
-        if (particleAssetReady)
+        if (prefabReady)
         {
-            TerrainRuntimeLogger.Logger.Debug($"Weather particle asset ready for {descriptor.Weather}: {descriptor.ParticleAssetKey}");
+            TerrainRuntimeLogger.Logger.Debug($"Weather prefab asset ready for {descriptor.Weather}: {descriptor.ParticleAssetKey}");
         }
     }
 
-    private bool TryResolveParticleEffect(WeatherEffectDescriptor descriptor)
+    private bool TryActivateWeatherEffectPrefab(WeatherEffectDescriptor descriptor)
     {
         if (descriptor.UsesPlaceholderGeometry || content is null || string.IsNullOrWhiteSpace(descriptor.ParticleAssetKey))
         {
+            ClearActiveWeatherEffect();
             return false;
         }
 
-        if (!particleSystemCache.TryGetValue(descriptor.ParticleAssetKey, out ParticleSystem? particleSystem))
+        if (!effectPrefabCache.TryGetValue(descriptor.ParticleAssetKey, out Prefab? prefab))
         {
             try
             {
-                particleSystem = content.Load<ParticleSystem>(descriptor.ParticleAssetKey);
+                prefab = content.Load<Prefab>(descriptor.ParticleAssetKey);
             }
             catch
             {
-                particleSystem = null;
+                prefab = null;
             }
 
-            particleSystemCache[descriptor.ParticleAssetKey] = particleSystem;
+            effectPrefabCache[descriptor.ParticleAssetKey] = prefab;
         }
 
-        return particleSystem is not null;
+        if (prefab is null)
+        {
+            ClearActiveWeatherEffect();
+            return false;
+        }
+
+        if (activeWeatherEffectKey == descriptor.ParticleAssetKey && activeWeatherEffectEntity is not null)
+        {
+            return true;
+        }
+
+        ClearActiveWeatherEffect();
+        activeWeatherEffectEntity = new Entity($"WeatherEffect_{descriptor.Weather}");
+        activeWeatherEffectKey = descriptor.ParticleAssetKey;
+        foreach (Entity child in prefab.Instantiate())
+        {
+            activeWeatherEffectEntity.AddChild(child);
+        }
+
+        weatherRoot?.AddChild(activeWeatherEffectEntity);
+        return true;
     }
 
     private void SetFallbackParticleVisibility(bool visible)
     {
-        if (visible)
-        {
-            return;
-        }
-
         foreach (WeatherParticleSlot particle in particles)
         {
+            if (visible)
+            {
+                if (particle.Entity.Transform.Scale == Vector3.Zero)
+                {
+                    particle.Entity.Transform.Scale = new Vector3(0.05f);
+                }
+
+                continue;
+            }
+
             particle.Entity.Transform.Scale = Vector3.Zero;
         }
+    }
+
+    private void ClearActiveWeatherEffect()
+    {
+        if (activeWeatherEffectEntity is not null)
+        {
+            activeWeatherEffectEntity.Scene = null;
+            activeWeatherEffectEntity.Transform.Parent = null;
+            activeWeatherEffectEntity = null;
+        }
+
+        activeWeatherEffectKey = null;
     }
 
     private void CacheSceneLighting()

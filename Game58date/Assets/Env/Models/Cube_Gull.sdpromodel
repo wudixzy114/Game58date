@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: bf7f10a1-a6e6-4e0b-8b71-784ebe91c78b
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 1.0, Y: 1.0, Z: 1.0}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.0, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 92450b3a-28b8-43c6-9a85-1e1c3fe46714:Env/Materials/Gull

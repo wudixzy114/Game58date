@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: 14811198-451e-477a-9d23-ff9b9142a435
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CapsuleProceduralModel
+    Radius: 0.25
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.0, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: 0e1061a0-e78f-42a1-9364-4c797ed1ea74:Env/Materials/Goat

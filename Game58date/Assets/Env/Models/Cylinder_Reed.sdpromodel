@@ -1,0 +1,11 @@
+!ProceduralModelAsset
+Id: e7ad64bc-aa81-48fc-a2e1-2d0f5ba97362
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CylinderProceduralModel
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.0, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: c9617a80-3c1c-46f2-8bce-15c0cfc0ca56:Env/Materials/Reed

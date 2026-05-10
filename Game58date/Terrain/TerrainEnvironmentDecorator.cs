@@ -303,6 +303,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateBroadleafTree(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateEnvironmentEntity("Trunk", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/trunk", EnvironmentMaterialKind.Bark), new Vector3(0f, 1.25f * scale, 0f), new Vector3(0.42f, 2.5f * scale, 0.42f)));
@@ -314,6 +326,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreatePineTree(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateEnvironmentEntity("Trunk", new EnvironmentAssetDescriptor($"{placement.Variant.Asset.AssetKey}/trunk", EnvironmentMaterialKind.Bark), new Vector3(0f, 1.5f * scale, 0f), new Vector3(0.35f, 3.0f * scale, 0.35f)));
@@ -326,6 +350,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateWetlandTree(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Trunk", EnvironmentMaterialKind.Bark, new Vector3(0f, 1.05f * scale, 0f), new Vector3(0.30f, 2.10f * scale, 0.30f)));
@@ -337,6 +373,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateBush(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("BushA", EnvironmentMaterialKind.Leaf, new Vector3(0f, 0.55f * scale, 0f), new Vector3(1.05f * scale, 0.70f * scale, 1.05f * scale)));
@@ -347,6 +395,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateReedPatch(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("ReedA", EnvironmentMaterialKind.Reed, new Vector3(-0.20f * scale, 0.65f * scale, 0.05f * scale), new Vector3(0.08f, 1.30f * scale, 0.08f), new Vector3(0f, 0f, -0.08f)));
@@ -359,6 +419,16 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateRockCluster(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            return visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("RockA", EnvironmentMaterialKind.Stone, new Vector3(-0.25f * scale, 0.28f * scale, 0.12f * scale), new Vector3(0.75f * scale, 0.56f * scale, 0.55f * scale), new Vector3(0.10f, 0.15f, 0.04f)));
@@ -369,6 +439,16 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateCairn(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            return visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Base", EnvironmentMaterialKind.RuinStone, new Vector3(0f, 0.24f * scale, 0f), new Vector3(1.10f * scale, 0.48f * scale, 1.10f * scale)));
@@ -379,6 +459,16 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateRuinArch(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            return visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("PillarA", EnvironmentMaterialKind.RuinStone, new Vector3(-0.70f * scale, 1.25f * scale, 0f), new Vector3(0.42f * scale, 2.50f * scale, 0.42f * scale)));
@@ -390,6 +480,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateDeer(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Body", EnvironmentMaterialKind.Deer, new Vector3(0f, 0.82f * scale, 0f), new Vector3(1.20f * scale, 0.65f * scale, 0.48f * scale)));
@@ -405,6 +507,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateGoat(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Body", EnvironmentMaterialKind.Goat, new Vector3(0f, 0.72f * scale, 0f), new Vector3(0.95f * scale, 0.56f * scale, 0.42f * scale)));
@@ -419,6 +533,18 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreateGull(EnvironmentPlacementRecord placement)
     {
+        if (!placement.Variant.Asset.UsesPlaceholderGeometry)
+        {
+            Entity entity = visualFactory.CreateEnvironmentEntity(
+                placement.Variant.Name,
+                placement.Variant.Asset,
+                placement.LocalPosition,
+                new Vector3(placement.Variant.HeightScale),
+                new Vector3(0f, placement.YawRadians, 0f));
+            AttachMotion(entity, placement.Variant.PositionAmplitude, placement.Variant.RotationAmplitude, placement.Variant.MotionSpeed, placement.Variation);
+            return entity;
+        }
+
         float scale = placement.Variant.HeightScale;
         var root = CreateRootEntity(placement.Variant.Name);
         root.AddChild(visualFactory.CreateBoxEntity("Body", EnvironmentMaterialKind.Gull, new Vector3(0f, 0.20f * scale, 0f), new Vector3(0.42f * scale, 0.20f * scale, 0.22f * scale)));
@@ -521,13 +647,15 @@ public sealed class TerrainEnvironmentDecorator
         entity.Tags.SetObject(EnvironmentEntityTagKeys.PropVariant, placement.Variant);
         entity.Transform.Position = placement.LocalPosition;
         entity.Transform.RotationEulerXYZ = new Vector3(0f, placement.YawRadians, 0f);
-        entity.Transform.Scale = Vector3.One;
+        entity.Transform.Scale = placement.Variant.Asset.UsesPlaceholderGeometry
+            ? Vector3.One
+            : new Vector3(placement.Variant.HeightScale);
 
-        if (placement.Variant.Kind is EnvironmentPropKind.Deer or EnvironmentPropKind.Goat)
+        if (placement.Variant.Asset.UsesPlaceholderGeometry && placement.Variant.Kind is EnvironmentPropKind.Deer or EnvironmentPropKind.Goat)
         {
             entity.Transform.Position += new Vector3(0f, (placement.Variant.HeightScale <= 0f ? 0f : placement.Variant.HeightScale) * 0.16f, 0f);
         }
-        else if (placement.Variant.Kind == EnvironmentPropKind.Gull)
+        else if (placement.Variant.Asset.UsesPlaceholderGeometry && placement.Variant.Kind == EnvironmentPropKind.Gull)
         {
             entity.Transform.Position += new Vector3(0f, (placement.Variant.HeightScale <= 0f ? 0f : placement.Variant.HeightScale) * 0.95f, 0f);
         }

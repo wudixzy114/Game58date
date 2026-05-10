@@ -1,0 +1,12 @@
+!ProceduralModelAsset
+Id: b797fcdc-fc6f-4f74-bb52-5478b570ed08
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Type: !CubeProceduralModel
+    Size: {X: 1.0, Y: 1.0, Z: 1.0}
+    Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+    UvScale: {X: 1.0, Y: 1.0}
+    LocalOffset: {X: 0.0, Y: 0.0, Z: 0.0}
+    NumberOfTextureCoordinates: 10
+    MaterialInstance:
+        Material: a164ee6e-2e75-44dd-a324-46ac77ceac5a:Env/Materials/Deer
