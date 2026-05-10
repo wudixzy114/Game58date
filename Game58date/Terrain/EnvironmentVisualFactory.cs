@@ -15,6 +15,7 @@ public sealed class EnvironmentVisualFactory
 {
     private readonly GraphicsDevice graphicsDevice;
     private readonly IContentManager? content;
+    private readonly EnvironmentAssetRegistry assetRegistry = new();
     private readonly Dictionary<EnvironmentMaterialKind, Material> materials = new();
     private readonly Dictionary<EnvironmentMaterialKind, Model> boxModels = new();
     private readonly Dictionary<string, Prefab?> prefabCache = new();
@@ -51,12 +52,13 @@ public sealed class EnvironmentVisualFactory
         Vector3 localScale,
         Vector3? localRotationEuler = null)
     {
-        if (TryCreatePrefabEntity(name, asset, localPosition, localScale, localRotationEuler, out Entity? prefabEntity))
+        EnvironmentAssetDescriptor resolvedAsset = assetRegistry.Resolve(asset);
+        if (TryCreatePrefabEntity(name, resolvedAsset, localPosition, localScale, localRotationEuler, out Entity? prefabEntity))
         {
             return prefabEntity!;
         }
 
-        return CreateBoxEntity(name, asset.FallbackMaterial, localPosition, localScale, localRotationEuler);
+        return CreateBoxEntity(name, resolvedAsset.FallbackMaterial, localPosition, localScale, localRotationEuler);
     }
 
     private bool TryCreatePrefabEntity(

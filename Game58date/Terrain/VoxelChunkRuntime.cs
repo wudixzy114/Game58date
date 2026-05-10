@@ -11,7 +11,8 @@ public sealed class VoxelChunkRuntime
         VoxelChunkMeshData meshData,
         VoxelChunkCollisionData collisionData,
         Entity visualEntity,
-        Entity? collisionEntity)
+        Entity? collisionEntity,
+        int environmentEntityCount = 0)
     {
         Coordinate = coordinate;
         Data = data;
@@ -19,6 +20,7 @@ public sealed class VoxelChunkRuntime
         CollisionData = collisionData;
         VisualEntity = visualEntity;
         CollisionEntity = collisionEntity;
+        EnvironmentEntityCount = environmentEntityCount;
     }
 
     public VoxelChunkCoordinate Coordinate { get; }
@@ -32,4 +34,6 @@ public sealed class VoxelChunkRuntime
     public Entity VisualEntity { get; }
 
     public Entity? CollisionEntity { get; }
+
+    public int EnvironmentEntityCount { get; }
 }

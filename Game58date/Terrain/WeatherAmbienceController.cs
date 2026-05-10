@@ -14,6 +14,7 @@ public sealed class WeatherAmbienceController : SyncScript
 
     private readonly WeatherParticleSlot[] particles = new WeatherParticleSlot[ParticleCount];
     private readonly WeatherEffectLibrary effectLibrary = new();
+    private readonly WeatherStateResolver weatherStateResolver = new();
     private readonly System.Collections.Generic.Dictionary<string, ParticleSystem?> particleSystemCache = new();
     private VoxelTerrainWorldRuntime? worldRuntime;
     private EnvironmentVisualFactory? visualFactory;
@@ -21,6 +22,7 @@ public sealed class WeatherAmbienceController : SyncScript
     private WorldLawRuntimeController? worldLawController;
     private Entity? weatherRoot;
     private IContentManager? content;
+    private readonly WeatherRuntimeState runtimeState = new();
     private WeatherKind currentWeather = WeatherKind.Clear;
     private float elapsedSeconds;
     private bool isInitialized;
@@ -87,7 +89,16 @@ public sealed class WeatherAmbienceController : SyncScript
         int worldX = (int)MathF.Floor(cameraEntity.Transform.Position.X);
         int worldZ = (int)MathF.Floor(cameraEntity.Transform.Position.Z);
         WorldSample sample = worldRuntime.SampleSurfaceWorld(worldX, worldZ);
-        WeatherKind desiredWeather = ResolveWeather(sample, worldX, worldZ);
+        WeatherRuntimeState nextState = weatherStateResolver.Resolve(
+            sample,
+            worldX,
+            worldZ,
+            worldRuntime.Settings.Seed,
+            worldLawController?.RuntimeState.WorldTimeSeconds ?? elapsedSeconds,
+            worldLawController?.RuntimeState);
+        ApplyResolvedState(nextState);
+
+        WeatherKind desiredWeather = runtimeState.TargetWeather;
         if (desiredWeather != currentWeather)
         {
             currentWeather = desiredWeather;
@@ -95,6 +106,8 @@ public sealed class WeatherAmbienceController : SyncScript
             TerrainRuntimeLogger.Logger.Info($"Weather ambience switched to {currentWeather} near ({worldX},{worldZ}) biome={sample.Biome}.");
         }
 
+        worldRuntime.Stats.WeatherSummary =
+            $"{runtimeState.TargetWeather} intensity={runtimeState.Intensity:0.00} wind={runtimeState.WindStrength:0.00} fog={runtimeState.FogHeight:0.00} snow={runtimeState.SnowCoverage:0.00}";
         UpdateParticles();
     }
 
@@ -108,41 +121,16 @@ public sealed class WeatherAmbienceController : SyncScript
         base.Cancel();
     }
 
-    private WeatherKind ResolveWeather(WorldSample sample, int worldX, int worldZ)
+    private void ApplyResolvedState(WeatherRuntimeState nextState)
     {
-        float worldTime = worldLawController?.RuntimeState.WorldTimeSeconds ?? elapsedSeconds;
-        int weatherTick = (int)MathF.Floor(worldTime / 18f);
-        float localCycle = Hash01(worldX / 8, worldZ / 8, weatherTick + worldRuntime!.Settings.Seed);
-        float signedCycle = localCycle * 2f - 1f;
-        float atmosphere = worldLawController?.RuntimeState.World.Atmosphere ?? 0f;
-        float humidity = sample.Moisture * 0.70f + sample.ShoreWeight * 0.12f + atmosphere * 0.28f + signedCycle * 0.10f;
-
-        if ((sample.Biome == BiomeKind.Alpine || sample.Biome == BiomeKind.Mountains) && sample.Temperature < 0.48f && humidity > 0.56f)
-        {
-            return WeatherKind.Snow;
-        }
-
-        if ((sample.Biome == BiomeKind.Shore || sample.Biome == BiomeKind.Wetland) && humidity > 0.54f && atmosphere > 0.16f)
-        {
-            return WeatherKind.Fog;
-        }
-
-        if (humidity > 0.72f)
-        {
-            return WeatherKind.Rain;
-        }
-
-        if (humidity > 0.56f && signedCycle < -0.18f)
-        {
-            return WeatherKind.Fog;
-        }
-
-        if ((sample.Biome == BiomeKind.Hills || sample.Biome == BiomeKind.Scree || sample.Slope > 0.34f) && signedCycle > 0.24f)
-        {
-            return WeatherKind.Wind;
-        }
-
-        return WeatherKind.Clear;
+        runtimeState.CurrentWeather = currentWeather;
+        runtimeState.TargetWeather = nextState.TargetWeather;
+        runtimeState.Blend = nextState.Blend;
+        runtimeState.Intensity = nextState.Intensity;
+        runtimeState.FogHeight = nextState.FogHeight;
+        runtimeState.SnowCoverage = nextState.SnowCoverage;
+        runtimeState.WindDirection = nextState.WindDirection;
+        runtimeState.WindStrength = nextState.WindStrength;
     }
 
     private void ApplyWeatherMaterial(WeatherKind weatherKind)
@@ -213,10 +201,10 @@ public sealed class WeatherAmbienceController : SyncScript
         int activeCount = currentWeather switch
         {
             WeatherKind.Clear => 6,
-            WeatherKind.Wind => 12,
-            WeatherKind.Fog => 20,
-            WeatherKind.Snow => 24,
-            WeatherKind.Rain => 28,
+            WeatherKind.Wind => 8 + (int)MathF.Round(runtimeState.WindStrength * 10f),
+            WeatherKind.Fog => 10 + (int)MathF.Round(runtimeState.Intensity * 18f),
+            WeatherKind.Snow => 12 + (int)MathF.Round(runtimeState.Intensity * 16f),
+            WeatherKind.Rain => 16 + (int)MathF.Round(runtimeState.Intensity * 14f),
             _ => 0,
         };
 
@@ -243,18 +231,18 @@ public sealed class WeatherAmbienceController : SyncScript
             {
                 case WeatherKind.Rain:
                     localPosition = new Vector3(
-                        MathF.Cos(angle) * radius,
+                        runtimeState.WindDirection.X * runtimeState.WindStrength * 1.6f + MathF.Cos(angle) * radius,
                         6.8f - fall * 13.0f,
-                        MathF.Sin(angle) * radius);
+                        runtimeState.WindDirection.Y * runtimeState.WindStrength * 1.6f + MathF.Sin(angle) * radius);
                     localScale = new Vector3(0.026f, 0.88f + slot.VerticalBias * 0.16f, 0.026f);
                     localRotation = new Vector3(0.16f, angle, 0.05f);
                     break;
 
                 case WeatherKind.Snow:
                     localPosition = new Vector3(
-                        MathF.Cos(angle + fall * 1.2f) * (radius * 0.82f),
+                        runtimeState.WindDirection.X * runtimeState.WindStrength * 0.8f + MathF.Cos(angle + fall * 1.2f) * (radius * 0.82f),
                         5.6f - fall * 9.2f,
-                        MathF.Sin(angle * 0.9f) * (radius * 0.82f));
+                        runtimeState.WindDirection.Y * runtimeState.WindStrength * 0.8f + MathF.Sin(angle * 0.9f) * (radius * 0.82f));
                     localScale = new Vector3(0.08f + slot.VerticalBias * 0.01f);
                     localRotation = new Vector3(motion, angle * 0.4f, motion * 0.7f);
                     break;
@@ -262,7 +250,7 @@ public sealed class WeatherAmbienceController : SyncScript
                 case WeatherKind.Fog:
                     localPosition = new Vector3(
                         MathF.Cos(angle * 0.28f) * (radius * 0.58f),
-                        0.8f + MathF.Sin(motion * 0.55f) * 0.24f + slot.VerticalBias * 0.18f,
+                        runtimeState.FogHeight + MathF.Sin(motion * 0.55f) * 0.24f + slot.VerticalBias * 0.18f,
                         MathF.Sin(angle * 0.28f) * (radius * 0.58f));
                     localScale = new Vector3(
                         0.78f + slot.VerticalBias * 0.12f,
@@ -273,9 +261,9 @@ public sealed class WeatherAmbienceController : SyncScript
 
                 case WeatherKind.Wind:
                     localPosition = new Vector3(
-                        -7.5f + fall * 15f,
+                        runtimeState.WindDirection.X * -7.5f + fall * 15f,
                         1.2f + slot.VerticalBias * 0.45f,
-                        MathF.Sin(angle) * 4.8f);
+                        runtimeState.WindDirection.Y * 4.8f + MathF.Sin(angle) * 4.8f);
                     localScale = new Vector3(0.065f + slot.VerticalBias * 0.01f);
                     localRotation = new Vector3(0.08f, 0.24f, 0.08f);
                     break;

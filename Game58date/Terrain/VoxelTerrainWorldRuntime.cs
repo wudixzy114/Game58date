@@ -361,7 +361,8 @@ public sealed class VoxelTerrainWorldRuntime
         var visualEntity = new Entity($"Chunk_{result.Coordinate.X}_{result.Coordinate.Z}");
         visualEntity.Transform.Position = chunkWorldPosition;
         modelFactory.AttachModels(visualEntity, result.MeshData);
-        environmentDecorator?.DecorateChunk(visualEntity, result.Data, scene.Entities.Count > 0 ? FindPrimaryCameraPosition(scene) : null);
+        Vector3? cameraFocus = scene.Entities.Count > 0 ? FindPrimaryCameraPosition(scene) : null;
+        environmentDecorator?.DecorateChunk(visualEntity, result.Data, cameraFocus);
         scene.Entities.Add(visualEntity);
 
         Entity? collisionEntity = null;
@@ -373,11 +374,13 @@ public sealed class VoxelTerrainWorldRuntime
             scene.Entities.Add(collisionEntity);
         }
 
-        chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, result.CollisionData, visualEntity, collisionEntity);
+        int environmentEntityCount = environmentDecorator?.CountEntitiesForChunk(result.Data, cameraFocus) ?? 0;
+        chunks[result.Coordinate] = new VoxelChunkRuntime(result.Coordinate, result.Data, result.MeshData, result.CollisionData, visualEntity, collisionEntity, environmentEntityCount);
         Stats.VisibleFaceCount += result.MeshData.FaceCount;
         Stats.SolidFaceCount += result.MeshData.Solid.FaceCount;
         Stats.WaterFaceCount += result.MeshData.Water.FaceCount;
         TerrainRuntimeLogger.Logger.Debug($"Integrated chunk {result.Coordinate} rev={result.Revision}, collisionBoxes={result.CollisionData.Boxes.Count}.");
+        UpdateEnvironmentStats();
     }
 
     private ChunkBuildResult BuildChunkImmediate(VoxelChunkCoordinate coordinate)
@@ -400,5 +403,24 @@ public sealed class VoxelTerrainWorldRuntime
         }
 
         return null;
+    }
+
+    private void UpdateEnvironmentStats()
+    {
+        int environmentEntityCount = 0;
+        int environmentChunkCount = 0;
+        foreach ((_, VoxelChunkRuntime runtime) in chunks)
+        {
+            if (runtime.EnvironmentEntityCount <= 0)
+            {
+                continue;
+            }
+
+            environmentChunkCount++;
+            environmentEntityCount += runtime.EnvironmentEntityCount;
+        }
+
+        Stats.EnvironmentChunkCount = environmentChunkCount;
+        Stats.EnvironmentEntityCount = environmentEntityCount;
     }
 }

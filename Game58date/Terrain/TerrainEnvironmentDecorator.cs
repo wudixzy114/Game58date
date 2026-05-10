@@ -39,12 +39,33 @@ public sealed class TerrainEnvironmentDecorator
         }
     }
 
+    public int CountEntitiesForChunk(VoxelChunkData chunkData, Vector3? focusWorldPosition = null)
+    {
+        Vector3 focus = focusWorldPosition ?? GetChunkCenterWorld(chunkData);
+        int placedCount = 0;
+        placedCount += CountRuleGroup(chunkData, focus, ruleSet.VegetationRules);
+        placedCount += CountRuleGroup(chunkData, focus, ruleSet.StructureRules);
+        placedCount += CountRuleGroup(chunkData, focus, ruleSet.AnimalRules);
+        return placedCount;
+    }
+
     private int PlaceRuleGroup(Entity root, VoxelChunkData chunkData, Vector3 focusWorldPosition, IReadOnlyList<EnvironmentSpawnRule> rules)
     {
         int placed = 0;
         foreach (EnvironmentSpawnRule rule in rules)
         {
             placed += PlaceRule(root, chunkData, focusWorldPosition, rule);
+        }
+
+        return placed;
+    }
+
+    private int CountRuleGroup(VoxelChunkData chunkData, Vector3 focusWorldPosition, IReadOnlyList<EnvironmentSpawnRule> rules)
+    {
+        int placed = 0;
+        foreach (EnvironmentSpawnRule rule in rules)
+        {
+            placed += CountRule(chunkData, focusWorldPosition, rule);
         }
 
         return placed;
@@ -77,6 +98,37 @@ public sealed class TerrainEnvironmentDecorator
                 EnvironmentPlacementRecord placement = CreatePlacement(context, variant, random);
                 Entity entity = CreatePropEntity(placement);
                 root.AddChild(entity);
+                placed++;
+            }
+        }
+
+        return placed;
+    }
+
+    private int CountRule(VoxelChunkData chunkData, Vector3 focusWorldPosition, EnvironmentSpawnRule rule)
+    {
+        int placed = 0;
+        for (int localZ = rule.MinEdgePadding; localZ < chunkData.Size - rule.MinEdgePadding && placed < rule.MaxPlacementsPerChunk; localZ += Math.Max(1, rule.GridStep))
+        {
+            for (int localX = rule.MinEdgePadding; localX < chunkData.Size - rule.MinEdgePadding && placed < rule.MaxPlacementsPerChunk; localX += Math.Max(1, rule.GridStep))
+            {
+                if (!TryGetPlacementContext(chunkData, localX, localZ, rule.ClearanceHeight, out PlacementContext context))
+                {
+                    continue;
+                }
+
+                if (!MatchesRule(context, rule))
+                {
+                    continue;
+                }
+
+                float random = Hash01(context.WorldX, context.WorldZ, rule.Name.GetHashCode());
+                if (random < rule.ProbabilityThreshold)
+                {
+                    continue;
+                }
+
+                SelectVariant(rule, context, focusWorldPosition);
                 placed++;
             }
         }
