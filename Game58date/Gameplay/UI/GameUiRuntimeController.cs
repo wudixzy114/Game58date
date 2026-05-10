@@ -5,10 +5,11 @@ using Stride.Input;
 
 namespace Game58date.Gameplay.UI;
 
-public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
+public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink, IGameUiNoticeSink
 {
     private readonly GameUiTheme theme = GameUiTheme.Default;
     private readonly GameUiContextState uiContext = new();
+    private readonly GameUiNoticeFeed noticeFeed = new();
     private GameUiComposer? composer;
     private bool lastMenuTogglePressed;
 
@@ -24,7 +25,9 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
 
         composer = new GameUiComposer(theme);
         composer.Attach(Entity, Services, this);
+        uiContext.Mode = GameUiMode.Exploration;
         uiContext.DebugHudVisible = WorldLawController.IsDebugHudVisible;
+        PushNotice("HUD", "Contextual ritual HUD attached to the world runtime.", GameUiNoticeSeverity.Positive, 4f);
         composer.Update(GameUiStateMapper.Map(WorldLawController.RuntimeState, uiContext, theme));
     }
 
@@ -39,6 +42,12 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
         WorldLawRuntimeState state = WorldLawController.RuntimeState;
         uiContext.DebugHudVisible = WorldLawController.IsDebugHudVisible;
         uiContext.IntentDraftText = WorldLawController.CurrentIntentDraftText;
+        uiContext.Mode = uiContext.MenuVisible
+            ? GameUiMode.Atlas
+            : (state.Intent.TextInputEnabled ? GameUiMode.InputFocus : GameUiMode.Exploration);
+        noticeFeed.Tick((float)Game.UpdateTime.Elapsed.TotalSeconds);
+        uiContext.Notices.Clear();
+        uiContext.Notices.AddRange(noticeFeed.Snapshot());
         composer.Update(GameUiStateMapper.Map(state, uiContext, theme));
     }
 
@@ -58,6 +67,8 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
     public void ToggleUiMenu()
     {
         uiContext.MenuVisible = !uiContext.MenuVisible;
+        uiContext.Mode = uiContext.MenuVisible ? GameUiMode.Atlas : GameUiMode.Exploration;
+        PushNotice("Atlas", uiContext.MenuVisible ? "System atlas opened." : "Returned to the exploration surface.", GameUiNoticeSeverity.Info, 3f);
     }
 
     public void ToggleNarrativeInput()
@@ -69,6 +80,8 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
 
         bool next = !WorldLawController.RuntimeState.Intent.TextInputEnabled;
         WorldLawController.SetIntentTextInputEnabled(next);
+        uiContext.Mode = next ? GameUiMode.InputFocus : GameUiMode.Exploration;
+        PushNotice("Input", next ? "Narrative input channel engaged." : "Narrative input channel muted.", GameUiNoticeSeverity.Info, 3f);
     }
 
     public void ToggleDebugHud()
@@ -81,5 +94,10 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
         bool next = !WorldLawController.IsDebugHudVisible;
         WorldLawController.SetDebugHudVisible(next);
         uiContext.DebugHudVisible = next;
+    }
+
+    public void PushNotice(string title, string body, GameUiNoticeSeverity severity, float seconds = 6f)
+    {
+        noticeFeed.Add(title, body, severity, seconds);
     }
 }

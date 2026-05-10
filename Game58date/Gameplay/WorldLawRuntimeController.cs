@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Game58date.Gameplay.UI;
 using Game58date.Terrain;
 using Stride.Core.Mathematics;
 using Stride.Engine;
@@ -36,6 +37,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     private OmenDirector? omenDirector;
     private PerceptionSkillController? perceptionSkillController;
     private OmenPresentationController? omenPresentationController;
+    private IGameUiNoticeSink? noticeSink;
 
     public WorldLawEngine? Engine { get; private set; }
 
@@ -79,6 +81,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         omenDirector = new OmenDirector(Engine.State.Omen);
         perceptionSkillController = new PerceptionSkillController(Engine.State.Perception);
         omenPresentationController = new OmenPresentationController();
+        noticeSink = Entity.Get<GameUiRuntimeController>();
         Scene? scene = camera.Scene ?? directionalLight?.Scene ?? Entity?.Scene;
         if (scene is not null)
         {
@@ -106,6 +109,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         hudVisible = RuntimeModeResolver.Resolve() == RuntimeMode.Prototype;
         PushLog("World law runtime ready.");
         PushLog("Tab input toggle. Enter submit intent. F2 sea. F3 loss. F4 violent. F5 peaceful. F6 mentor. Q perception.");
+        noticeSink?.PushNotice("World Law", "Runtime initialized and ready for contextual UI feedback.", GameUiNoticeSeverity.Positive, 4f);
         UpdateLighting();
     }
 
@@ -422,6 +426,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         }
 
         PushLog($"Omen[{GetOmenSourceTitle(omenRecord.Source)}]: {omenRecord.Description}");
+        noticeSink?.PushNotice("Omen", omenRecord.Description, omenRecord.OmenType == OmenType.NaturalAnomaly ? GameUiNoticeSeverity.Danger : GameUiNoticeSeverity.Omen, 7f);
         omenPresentationController?.HandleOmenActivated(omenRecord);
         UpdateLighting();
     }
@@ -436,6 +441,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         Engine.State.HeroStage = stage;
         PushLog($"Narrative: {WorldLawEngine.GetStageTitle(stage)}");
         PushLog(reason);
+        noticeSink?.PushNotice("Journey", reason, GameUiNoticeSeverity.Positive, 6f);
         UpdateLighting();
     }
 
@@ -513,6 +519,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         }
 
         PushLog($"Intent topic: {GetIntentTopicTitle(record.Topic)} ({record.Confidence * 100f:0}%)");
+        noticeSink?.PushNotice("Intent", record.Summary, GameUiNoticeSeverity.Info, 6f);
         if (!string.IsNullOrWhiteSpace(record.SuggestedTargetBiome))
         {
             Engine.State.World.TargetBiome = record.SuggestedTargetBiome;
@@ -538,6 +545,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
         }
 
         PushLog($"Perception activated at {omenScore * 100f:0}% omen intensity.");
+        noticeSink?.PushNotice("Perception", "The world has entered a heightened perceptual state.", GameUiNoticeSeverity.Omen, 5f);
         omenPresentationController?.HandlePerceptionActivated(Engine.State.Perception.Intensity);
         UpdateLighting();
     }

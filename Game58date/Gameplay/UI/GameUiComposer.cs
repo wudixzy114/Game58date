@@ -24,12 +24,14 @@ public sealed class GameUiComposer
     private TextBlock? subtitleText;
     private TextBlock? stageText;
     private TextBlock? biomeText;
+    private TextBlock? modeSummaryText;
     private Border? omenCalloutBorder;
     private TextBlock? omenText;
     private TextBlock? omenDetailText;
     private TextBlock? profileText;
     private TextBlock? perceptionText;
     private TextBlock? intentText;
+    private TextBlock? worldPulseSummaryText;
     private TextBlock? helpText;
     private TextBlock? inputHintText;
     private EditText? intentInput;
@@ -91,20 +93,19 @@ public sealed class GameUiComposer
         SetText(subtitleText, viewState.SubtitleText);
         SetText(stageText, viewState.StageText);
         SetText(biomeText, viewState.BiomeText);
+        SetText(modeSummaryText, viewState.ModeSummaryText);
         SetText(omenText, viewState.OmenText);
         SetText(omenDetailText, viewState.OmenDetailText);
         SetText(profileText, viewState.ProfileText);
         SetText(perceptionText, viewState.PerceptionText);
         SetText(intentText, viewState.IntentText);
+        SetText(worldPulseSummaryText, viewState.WorldPulseSummaryText);
         SetText(helpText, viewState.HelpText);
         SetText(inputHintText, viewState.InputHintText);
         SetText(lastIntentSummaryText, viewState.LastIntentSummaryText);
         SetText(narrativeTitleText, viewState.NarrativeTitleText);
         SetText(narrativeReasonText, viewState.NarrativeReasonText);
-        SetText(historyTitleText, viewState.HistoryTitleText);
-        SetText(historyEntryA, viewState.HistoryLines.Length > 0 ? viewState.HistoryLines[0] : string.Empty);
-        SetText(historyEntryB, viewState.HistoryLines.Length > 1 ? viewState.HistoryLines[1] : string.Empty);
-        SetText(historyEntryC, viewState.HistoryLines.Length > 2 ? viewState.HistoryLines[2] : string.Empty);
+        UpdateSignalRail(viewState);
         SetText(menuTitleText, viewState.MenuTitleText);
         SetText(menuStageText, viewState.MenuStageText);
         SetText(menuMetaText, viewState.MenuMetaText);
@@ -201,10 +202,12 @@ public sealed class GameUiComposer
         subtitleText.Height = 42f;
         stageText = CreateText("", 19f, theme.TextPrimary);
         biomeText = CreateText("", 16f, theme.TextMuted);
+        modeSummaryText = CreateText("", 15f, theme.AccentCyan);
         headerStack.Children.Add(titleText);
         headerStack.Children.Add(subtitleText);
         headerStack.Children.Add(stageText);
         headerStack.Children.Add(biomeText);
+        headerStack.Children.Add(modeSummaryText);
 
         omenCalloutBorder = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 620f, 144f);
         UIElementExtensions.SetCanvasPinOrigin(omenCalloutBorder, new Vector3(0f, 0f, 0f));
@@ -247,9 +250,13 @@ public sealed class GameUiComposer
         profileText.Height = 40f;
         perceptionText = CreateText("", 15f, theme.AccentCyan);
         intentText = CreateText("", 14f, theme.TextMuted);
+        worldPulseSummaryText = CreateText("", 14f, theme.AccentGold);
+        worldPulseSummaryText.WrapText = true;
+        worldPulseSummaryText.Height = 34f;
         profileStack.Children.Add(profileText);
         profileStack.Children.Add(perceptionText);
         profileStack.Children.Add(intentText);
+        profileStack.Children.Add(worldPulseSummaryText);
 
         Border metersPanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 194f);
         UIElementExtensions.SetCanvasPinOrigin(metersPanel, new Vector3(0f, 0f, 0f));
@@ -547,6 +554,34 @@ public sealed class GameUiComposer
         widgets.Summary.Text = value.SummaryText;
         widgets.Fill.BackgroundColor = value.FillColor;
         widgets.Fill.Width = widgets.TrackWidth * MathUtil.Clamp(value.FillRatio, 0f, 1f);
+    }
+
+    private void UpdateSignalRail(GameUiViewState viewState)
+    {
+        if (viewState.Notices.Length > 0)
+        {
+            SetText(historyTitleText, "Signal Rail");
+            SetText(historyEntryA, FormatNotice(viewState.Notices, 0));
+            SetText(historyEntryB, FormatNotice(viewState.Notices, 1));
+            SetText(historyEntryC, viewState.HistoryLines.Length > 0 ? viewState.HistoryLines[0] : string.Empty);
+            return;
+        }
+
+        SetText(historyTitleText, viewState.HistoryTitleText);
+        SetText(historyEntryA, viewState.HistoryLines.Length > 0 ? viewState.HistoryLines[0] : string.Empty);
+        SetText(historyEntryB, viewState.HistoryLines.Length > 1 ? viewState.HistoryLines[1] : string.Empty);
+        SetText(historyEntryC, viewState.HistoryLines.Length > 2 ? viewState.HistoryLines[2] : string.Empty);
+    }
+
+    private static string FormatNotice(GameUiNoticeRecord[] notices, int index)
+    {
+        if (notices.Length <= index)
+        {
+            return string.Empty;
+        }
+
+        GameUiNoticeRecord notice = notices[index];
+        return $"{notice.TitleText}  {notice.BodyText}";
     }
 
     private void HandleMenuToggleClicked(object? sender, RoutedEventArgs e)

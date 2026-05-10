@@ -34,6 +34,16 @@ public static class GameUiStateMapper
         return new GameUiViewState
         {
             ModeTagText = context.ModeTag,
+            ModeSummaryText = context.Mode switch
+            {
+                GameUiMode.Exploration => "Exploration",
+                GameUiMode.InputFocus => "Narrative Input",
+                GameUiMode.Atlas => "System Atlas",
+                GameUiMode.MainMenu => "Main Menu",
+                GameUiMode.Showcase => "Showcase",
+                GameUiMode.Routing => "Development Router",
+                _ => "Unknown",
+            },
             TitleText = "GAME58DATE",
             SubtitleText = context.Subtitle,
             StageText = $"Hero Journey: {WorldLawEngine.GetStageTitle(state.Narrative.CurrentStage)}",
@@ -101,6 +111,8 @@ public static class GameUiStateMapper
             MenuToggleButtonText = context.MenuVisible ? "Close Atlas" : "Open Atlas",
             NarrativeInputButtonText = inputEnabled ? "Mute Input" : "Enable Input",
             DebugHudButtonText = context.DebugHudVisible ? "Hide Debug HUD" : "Show Debug HUD",
+            JourneySummaryText = state.Narrative.LastStageReason,
+            WorldPulseSummaryText = $"Omens {state.Omen.History.Count}  Pressure {GameUiFormatting.AsPercent(state.World.ResourcePressure)}  Blessing {GameUiFormatting.AsPercent(state.World.BlessingWeight)}",
             ModeTagFillColor = state.Perception.IsActive ? theme.AccentCyan : omenTint,
             ModeTagTextColor = theme.PanelBase,
             OmenAccentColor = omenTint,
@@ -110,6 +122,7 @@ public static class GameUiStateMapper
             InputFillColor = inputEnabled
                 ? (state.Perception.IsActive ? theme.PanelElevated : theme.InputFill)
                 : theme.PanelBase,
+            Notices = context.Notices.ToArray(),
         };
     }
 

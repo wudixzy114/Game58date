@@ -70,6 +70,14 @@ public sealed class GameUiViewState
 
     public string DebugHudButtonText { get; set; } = "Show Debug HUD";
 
+    public string ModeSummaryText { get; set; } = string.Empty;
+
+    public string JourneySummaryText { get; set; } = string.Empty;
+
+    public string WorldPulseSummaryText { get; set; } = string.Empty;
+
+    public GameUiNoticeRecord[] Notices { get; set; } = Array.Empty<GameUiNoticeRecord>();
+
     public Color ModeTagFillColor { get; set; }
 
     public Color ModeTagTextColor { get; set; }

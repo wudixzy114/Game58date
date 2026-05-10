@@ -22,6 +22,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
     private readonly GameUiTheme theme = GameUiTheme.Default;
     private readonly GameUiContextState uiContext = new()
     {
+        Mode = GameUiMode.Showcase,
         ModeTag = "UI Showcase",
         Subtitle = "A dedicated demonstration scene for the formal contextual UI system, including intent, omen, perception, atlas, and state gradients.",
         HelpText = "Space next vignette  Q sense  Tab input  D draft  Esc atlas  H debug  F2..F6 quick motifs",
@@ -29,6 +30,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
     };
 
     private readonly OmenPresentationController omenPresentation = new();
+    private readonly GameUiNoticeFeed noticeFeed = new();
 
     private GameUiComposer? composer;
     private Entity? lightEntity;
@@ -56,6 +58,8 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
 
         ApplyVignette(0);
         UpdateDraftText(ShowcasePrompts[0]);
+        noticeFeed.Add("Showcase", "UI showcase initialized. Use F2-F6 or Space to cycle curated states.", GameUiNoticeSeverity.Positive, 6f);
+        SyncNotices();
         composer.Update(GameUiStateMapper.Map(state, uiContext, theme));
     }
 
@@ -73,10 +77,12 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
 
         HandleInput();
         AnimateState(deltaTime);
+        noticeFeed.Tick(deltaTime);
         omenPresentation.Update(state, deltaTime);
         ApplySceneLighting();
 
         uiContext.DebugHudVisible = debugHudVisible;
+        SyncNotices();
         composer.Update(GameUiStateMapper.Map(state, uiContext, theme));
         DrawOverlayDebug();
     }
@@ -84,11 +90,15 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
     public void ToggleUiMenu()
     {
         uiContext.MenuVisible = !uiContext.MenuVisible;
+        uiContext.Mode = uiContext.MenuVisible ? GameUiMode.Atlas : GameUiMode.Showcase;
+        noticeFeed.Add("Atlas", uiContext.MenuVisible ? "Showcase atlas opened." : "Returned to showcase playback.", GameUiNoticeSeverity.Info, 3f);
     }
 
     public void ToggleNarrativeInput()
     {
         state.Intent.TextInputEnabled = !state.Intent.TextInputEnabled;
+        uiContext.Mode = state.Intent.TextInputEnabled ? GameUiMode.InputFocus : GameUiMode.Showcase;
+        noticeFeed.Add("Input", state.Intent.TextInputEnabled ? "Showcase input channel engaged." : "Showcase input channel muted.", GameUiNoticeSeverity.Info, 3f);
     }
 
     public void ToggleDebugHud()
@@ -130,6 +140,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
             {
                 state.Perception.ActivationCount++;
                 omenPresentation.HandlePerceptionActivated(state.Perception.Intensity);
+                noticeFeed.Add("Perception", "Heightened sight overlays are now emphasized in the showcase.", GameUiNoticeSeverity.Omen, 5f);
             }
         }
         wasQPressed = qPressed;
@@ -189,6 +200,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
         {
             case 0:
                 uiContext.ModeTag = "Exploration HUD";
+                uiContext.Mode = GameUiMode.Exploration;
                 UpdateDraftText(ShowcasePrompts[index]);
                 state.Narrative.CurrentStage = HeroJourneyStage.RoadOfTrials;
                 state.Narrative.LastStageReason = "Long-range travel intent and visible routes turned the clean HUD into an active exploration state.";
@@ -201,9 +213,11 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
                 state.Intent.SubmittedIntentCount = 3;
                 state.Intent.LastIntent = CreateIntent(IntentTopic.Exploration, 0.92f, ShowcasePrompts[index], "Boundary-crossing exploration intent focused on the sea horizon.", "Desert Crossing");
                 PushOmen(OmenType.PathRevelation, OmenSource.Intent, 0.90f, "The horizon answered the crossing request with a revealed route toward a hidden dock.");
+                noticeFeed.Add("Vignette", "Exploration HUD emphasizes route clarity and clean navigation surfaces.", GameUiNoticeSeverity.Positive, 6f);
                 break;
             case 1:
                 uiContext.ModeTag = "Mentor Encounter";
+                uiContext.Mode = GameUiMode.Showcase;
                 UpdateDraftText(ShowcasePrompts[index]);
                 state.Narrative.CurrentStage = HeroJourneyStage.MeetingTheMentor;
                 state.Narrative.LastStageReason = "Faith, positive karma, and guidance-seeking behavior converged into a mentor-facing interface state.";
@@ -221,9 +235,11 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
                 state.Perception.CooldownSecondsRemaining = 13.6f;
                 state.Perception.ActivationCount = 2;
                 PushOmen(OmenType.GuideArrival, OmenSource.Narrative, 0.84f, "A patient guide stepped into view as the mentor stage resolved.");
+                noticeFeed.Add("Vignette", "Mentor encounter surfaces guidance, faith, and omen response in the interface.", GameUiNoticeSeverity.Omen, 6f);
                 break;
             case 2:
                 uiContext.ModeTag = "Divination Layer";
+                uiContext.Mode = GameUiMode.InputFocus;
                 UpdateDraftText(ShowcasePrompts[index]);
                 state.Narrative.CurrentStage = HeroJourneyStage.ApproachToTheInmostCave;
                 state.Narrative.LastStageReason = "Commitment, repeated intent, and high path clarity unlocked the divinatory approach state.";
@@ -244,9 +260,11 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
                     BlessingDelta = 0.36f,
                     TriggeredOmen = OmenType.Divination,
                 });
+                noticeFeed.Add("Vignette", "Divination mode foregrounds curiosity, omen score, and interpretive feedback.", GameUiNoticeSeverity.Omen, 6f);
                 break;
             case 3:
                 uiContext.ModeTag = "Compassion State";
+                uiContext.Mode = GameUiMode.Exploration;
                 UpdateDraftText(ShowcasePrompts[index]);
                 state.Narrative.CurrentStage = HeroJourneyStage.CrossingTheThreshold;
                 state.Narrative.LastStageReason = "Compassionate intent reshaped the social field and produced a lighter contextual surface.";
@@ -260,9 +278,11 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
                 state.Intent.SubmittedIntentCount = 2;
                 state.Intent.LastIntent = CreateIntent(IntentTopic.Compassion, 0.86f, ShowcasePrompts[index], "Compassion intent focused on peace, aid, and restoring social order.", "Market Refuge");
                 PushOmen(OmenType.SocialShift, OmenSource.Causality, 0.81f, "Lanterns returned to the market after repeated compassionate choices.");
+                noticeFeed.Add("Vignette", "Compassion state shifts the interface toward social recovery and lighter atmospheric cues.", GameUiNoticeSeverity.Positive, 6f);
                 break;
             case 4:
                 uiContext.ModeTag = "Backlash State";
+                uiContext.Mode = GameUiMode.Exploration;
                 UpdateDraftText(ShowcasePrompts[index]);
                 state.Narrative.CurrentStage = HeroJourneyStage.RoadOfTrials;
                 state.Narrative.LastStageReason = "Aggressive intent and accumulated pressure forced the UI into a danger-weighted omen state.";
@@ -276,6 +296,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
                 state.Intent.SubmittedIntentCount = 3;
                 state.Intent.LastIntent = CreateIntent(IntentTopic.Domination, 0.87f, ShowcasePrompts[index], "Dominance intent focused on violence, control, and plunder.", "Ash Frontier");
                 PushOmen(OmenType.NaturalAnomaly, OmenSource.EmergentWorldLaw, 0.92f, "Resource pressure and hostile karma condensed into a violent natural backlash.");
+                noticeFeed.Add("Vignette", "Backlash state pushes danger-weighted omen messaging and hostile pressure feedback.", GameUiNoticeSeverity.Danger, 6f);
                 break;
         }
 
@@ -339,6 +360,12 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
     private void UpdateDraftText(string text)
     {
         uiContext.IntentDraftText = state.Intent.TextInputEnabled ? text : string.Empty;
+    }
+
+    private void SyncNotices()
+    {
+        uiContext.Notices.Clear();
+        uiContext.Notices.AddRange(noticeFeed.Snapshot());
     }
 
     private void RotateDraftText()
