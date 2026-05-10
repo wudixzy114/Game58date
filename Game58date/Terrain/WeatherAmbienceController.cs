@@ -111,12 +111,12 @@ public sealed class WeatherAmbienceController : SyncScript
         float atmosphere = worldLawController?.RuntimeState.World.Atmosphere ?? 0f;
         float humidity = sample.Moisture * 0.70f + sample.ShoreWeight * 0.12f + atmosphere * 0.28f + signedCycle * 0.10f;
 
-        if (sample.Biome == BiomeKind.Mountains && sample.Temperature < 0.48f && humidity > 0.56f)
+        if ((sample.Biome == BiomeKind.Alpine || sample.Biome == BiomeKind.Mountains) && sample.Temperature < 0.48f && humidity > 0.56f)
         {
             return WeatherKind.Snow;
         }
 
-        if (sample.Biome == BiomeKind.Shore && humidity > 0.54f && atmosphere > 0.16f)
+        if ((sample.Biome == BiomeKind.Shore || sample.Biome == BiomeKind.Wetland) && humidity > 0.54f && atmosphere > 0.16f)
         {
             return WeatherKind.Fog;
         }
@@ -131,7 +131,7 @@ public sealed class WeatherAmbienceController : SyncScript
             return WeatherKind.Fog;
         }
 
-        if ((sample.Biome == BiomeKind.Hills || sample.Slope > 0.34f) && signedCycle > 0.24f)
+        if ((sample.Biome == BiomeKind.Hills || sample.Biome == BiomeKind.Scree || sample.Slope > 0.34f) && signedCycle > 0.24f)
         {
             return WeatherKind.Wind;
         }

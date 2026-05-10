@@ -105,8 +105,8 @@ public sealed class TerrainChunkGenerator
         if (!exposed)
         {
             return worldY > sample.StoneHeight
-                ? sample.Biome == BiomeKind.Shore ? BlockKind.Sand : BlockKind.Dirt
-                : BlockKind.Stone;
+                ? ResolveSubsurfaceBlock(sample, worldY)
+                : ResolveDeepBlock(sample);
         }
 
         SurfaceMaterialKind materialKind = surfaceMaterialResolver.Resolve(sample, worldY, openAbove);
@@ -115,8 +115,20 @@ public sealed class TerrainChunkGenerator
             case SurfaceMaterialKind.Shore:
                 return BlockKind.Sand;
 
+            case SurfaceMaterialKind.Wetland:
+                return openAbove ? BlockKind.Mud : BlockKind.Peat;
+
+            case SurfaceMaterialKind.ForestFloor:
+                return openAbove ? BlockKind.Moss : BlockKind.Dirt;
+
             case SurfaceMaterialKind.Cliff:
                 return depthFromSurface <= 2 ? BlockKind.Stone : BlockKind.Dirt;
+
+            case SurfaceMaterialKind.Scree:
+                return BlockKind.Scree;
+
+            case SurfaceMaterialKind.Alpine:
+                return openAbove ? BlockKind.Snow : BlockKind.Stone;
 
             case SurfaceMaterialKind.HighGrass:
                 return openAbove ? BlockKind.Grass : BlockKind.Dirt;
@@ -134,6 +146,45 @@ public sealed class TerrainChunkGenerator
 
                 return BlockKind.Stone;
         }
+    }
+
+    private static BlockKind ResolveSubsurfaceBlock(WorldSample sample, int worldY)
+    {
+        if (sample.Biome == BiomeKind.Shore)
+        {
+            return BlockKind.Sand;
+        }
+
+        if (sample.Biome == BiomeKind.Wetland)
+        {
+            return worldY >= sample.WaterLevel - 1
+                ? BlockKind.Peat
+                : BlockKind.Dirt;
+        }
+
+        if (sample.Biome == BiomeKind.Woodland)
+        {
+            return BlockKind.Dirt;
+        }
+
+        if (sample.Biome == BiomeKind.Scree)
+        {
+            return BlockKind.Scree;
+        }
+
+        if (sample.Biome == BiomeKind.Alpine)
+        {
+            return BlockKind.Stone;
+        }
+
+        return BlockKind.Dirt;
+    }
+
+    private static BlockKind ResolveDeepBlock(WorldSample sample)
+    {
+        return sample.Biome == BiomeKind.Scree
+            ? BlockKind.Scree
+            : BlockKind.Stone;
     }
 
     private void ApplyOverrides(VoxelChunkData chunk)

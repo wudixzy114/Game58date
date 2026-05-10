@@ -15,4 +15,12 @@ public enum TerrainTextureTile : byte
     DrySoil = 9,
     MossyStone = 10,
     RichSoil = 11,
+    Mud = 12,
+    Peat = 13,
+    ForestMoss = 14,
+    LeafLitter = 15,
+    FrostGrass = 16,
+    SnowDust = 17,
+    Scree = 18,
+    WetGrassSide = 19,
 }

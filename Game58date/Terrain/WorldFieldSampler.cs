@@ -36,14 +36,27 @@ public sealed class WorldFieldSampler
 
     public WorldSample SampleSurface(int worldX, int worldZ)
     {
-        float surfaceBase = SampleSurfaceHeightValue(worldX, worldZ, out float continentalness, out float ridge, out float moisture, out float temperature, out float shoreWeight, out float hillWeight, out float mountainWeight);
+        float surfaceBase = SampleSurfaceHeightValue(
+            worldX,
+            worldZ,
+            out float continentalness,
+            out float ridge,
+            out float moisture,
+            out float temperature,
+            out float shoreWeight,
+            out float wetlandWeight,
+            out float woodlandWeight,
+            out float hillWeight,
+            out float screeWeight,
+            out float alpineWeight,
+            out float mountainWeight);
         int surfaceHeight = Math.Clamp((int)MathF.Round(surfaceBase), 3, settings.ChunkHeight - 2);
         surfaceHeight = Math.Clamp(surfaceHeight, 3, settings.ChunkHeight - 2);
 
         int soilDepth = 4 + (int)MathF.Round(moisture * 2f);
         int stoneHeight = Math.Max(1, surfaceHeight - soilDepth);
         float slope = EstimateSlope(worldX, worldZ);
-        BiomeWeights weights = BuildBiomeWeights(shoreWeight, hillWeight, mountainWeight);
+        BiomeWeights weights = BuildBiomeWeights(shoreWeight, wetlandWeight, woodlandWeight, hillWeight, screeWeight, alpineWeight, mountainWeight);
 
         return new WorldSample(
             surfaceHeight,
@@ -56,7 +69,11 @@ public sealed class WorldFieldSampler
             continentalness,
             ridge,
             shoreWeight,
+            wetlandWeight,
+            woodlandWeight,
             hillWeight,
+            screeWeight,
+            alpineWeight,
             mountainWeight,
             slope);
     }
@@ -97,7 +114,11 @@ public sealed class WorldFieldSampler
         out float moisture,
         out float temperature,
         out float shoreWeight,
+        out float wetlandWeight,
+        out float woodlandWeight,
         out float hillWeight,
+        out float screeWeight,
+        out float alpineWeight,
         out float mountainWeight)
     {
         float warpedX = worldX + warpNoiseX.Fractal2D(worldX, worldZ, 3, settings.DomainWarpFrequency, 0.5f, 2.0f) * settings.DomainWarpAmplitude;
@@ -112,53 +133,116 @@ public sealed class WorldFieldSampler
         shoreWeight = Saturate((0.16f - MathF.Abs(continentalness)) * 5.5f);
         mountainWeight = Saturate(MathF.Max(0f, continentalness - 0.03f) * 1.55f);
         hillWeight = Saturate((ridge - 0.34f) * 1.45f) * (1f - mountainWeight * 0.65f);
-        float plainWeight = Saturate(1f - shoreWeight - hillWeight * 0.6f - mountainWeight);
+        wetlandWeight = Saturate((moisture - 0.62f) * 1.6f) * Saturate(1f - hillWeight * 1.25f - mountainWeight) * Saturate(0.40f - MathF.Abs(continentalness) * 1.35f);
+        woodlandWeight = Saturate((moisture - 0.38f) * 1.25f) * Saturate((temperature - 0.34f) * 1.10f) * Saturate(1f - hillWeight * 0.72f - mountainWeight * 0.82f - wetlandWeight * 0.58f);
+        screeWeight = Saturate((hillWeight * 0.62f + mountainWeight * 0.38f) * Saturate((ridge - 0.52f) * 2.2f) * Saturate((1f - moisture) * 1.25f));
+        alpineWeight = Saturate((mountainWeight * 0.72f + hillWeight * 0.18f) * Saturate((0.42f - temperature) * 2.2f) * Saturate(continentalness * 1.18f + 0.35f));
+        float plainWeight = Saturate(1f - shoreWeight - wetlandWeight - woodlandWeight - hillWeight * 0.5f - screeWeight * 0.4f - alpineWeight * 0.55f - mountainWeight);
 
         float baseLand = settings.BaseHeight + continentalness * settings.HeightAmplitude;
         float erosionCut = erosion * 5.5f;
         float coastFlatten = shoreWeight * 5.0f;
         float rollingHills = ridge * hillWeight * 5.0f;
+        float wetlandBasin = wetlandWeight * (2.2f + moisture * 1.8f);
+        float woodlandRise = woodlandWeight * 1.8f;
+        float screeRise = screeWeight * 2.0f;
+        float alpineRise = alpineWeight * 3.5f;
         float mountainHeight = ridge * ridge * settings.MountainAmplitude * mountainWeight;
         float terrace = ApplyTerracing(baseLand + mountainHeight + rollingHills - erosionCut - coastFlatten, 2.0f, 0.40f);
         float detail = ridge * plainWeight * 0.9f;
-        return terrace + detail;
+        return terrace + detail + woodlandRise + screeRise + alpineRise - wetlandBasin;
     }
 
     private float EstimateSlope(int worldX, int worldZ)
     {
-        float center = SampleSurfaceHeightValue(worldX, worldZ, out _, out _, out _, out _, out _, out _, out _);
-        float offsetX = SampleSurfaceHeightValue(worldX + 2, worldZ, out _, out _, out _, out _, out _, out _, out _);
-        float offsetZ = SampleSurfaceHeightValue(worldX, worldZ + 2, out _, out _, out _, out _, out _, out _, out _);
+        float center = SampleSurfaceHeightValue(worldX, worldZ, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+        float offsetX = SampleSurfaceHeightValue(worldX + 2, worldZ, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
+        float offsetZ = SampleSurfaceHeightValue(worldX, worldZ + 2, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _, out _);
         float dx = MathF.Abs(offsetX - center);
         float dz = MathF.Abs(offsetZ - center);
         return Saturate((dx + dz) / 6f);
     }
 
-    private static BiomeWeights BuildBiomeWeights(float shoreWeight, float hillWeight, float mountainWeight)
+    private static BiomeWeights BuildBiomeWeights(
+        float shoreWeight,
+        float wetlandWeight,
+        float woodlandWeight,
+        float hillWeight,
+        float screeWeight,
+        float alpineWeight,
+        float mountainWeight)
     {
         float mountains = Saturate(mountainWeight);
         float shore = Saturate(shoreWeight * (1f - mountains * 0.7f));
-        float hills = Saturate(hillWeight * (1f - shore * 0.45f));
-        float plains = Saturate(1f - shore - hills - mountains);
+        float wetlands = Saturate(wetlandWeight * (1f - shore * 0.45f - mountains * 0.62f));
+        float woodlands = Saturate(woodlandWeight * (1f - shore * 0.25f - wetlands * 0.35f - mountains * 0.30f));
+        float alpine = Saturate(alpineWeight * (1f - shore * 0.60f));
+        float scree = Saturate(screeWeight * (1f - shore * 0.50f - wetlands * 0.80f));
+        float hills = Saturate(hillWeight * (1f - shore * 0.45f - alpine * 0.48f - scree * 0.30f));
+        float plains = Saturate(1f - shore - wetlands - woodlands - hills - scree - alpine - mountains);
 
-        float total = shore + plains + hills + mountains;
+        float total = shore + plains + wetlands + woodlands + hills + scree + alpine + mountains;
         if (total <= 0f)
         {
-            return new BiomeWeights(0f, 1f, 0f, 0f);
+            return new BiomeWeights(0f, 1f, 0f, 0f, 0f, 0f, 0f, 0f);
         }
 
         return new BiomeWeights(
             shore / total,
             plains / total,
+            wetlands / total,
+            woodlands / total,
             hills / total,
+            scree / total,
+            alpine / total,
             mountains / total);
     }
 
     private static BiomeKind ResolveBiome(BiomeWeights weights, float ridge)
     {
-        if (weights.Shore >= weights.Plains && weights.Shore >= weights.Hills && weights.Shore >= weights.Mountains)
+        if (weights.Shore >= weights.Plains &&
+            weights.Shore >= weights.Wetland &&
+            weights.Shore >= weights.Woodland &&
+            weights.Shore >= weights.Hills &&
+            weights.Shore >= weights.Scree &&
+            weights.Shore >= weights.Alpine &&
+            weights.Shore >= weights.Mountains)
         {
             return BiomeKind.Shore;
+        }
+
+        if (weights.Wetland >= weights.Plains &&
+            weights.Wetland >= weights.Woodland &&
+            weights.Wetland >= weights.Hills &&
+            weights.Wetland >= weights.Scree &&
+            weights.Wetland >= weights.Alpine &&
+            weights.Wetland >= weights.Mountains)
+        {
+            return BiomeKind.Wetland;
+        }
+
+        if (weights.Woodland >= weights.Plains &&
+            weights.Woodland >= weights.Hills &&
+            weights.Woodland >= weights.Scree &&
+            weights.Woodland >= weights.Alpine &&
+            weights.Woodland >= weights.Mountains)
+        {
+            return BiomeKind.Woodland;
+        }
+
+        if (weights.Alpine >= weights.Scree &&
+            weights.Alpine >= weights.Hills &&
+            weights.Alpine >= weights.Plains &&
+            weights.Alpine >= weights.Mountains)
+        {
+            return BiomeKind.Alpine;
+        }
+
+        if (weights.Scree >= weights.Hills &&
+            weights.Scree >= weights.Plains &&
+            weights.Scree >= weights.Mountains)
+        {
+            return BiomeKind.Scree;
         }
 
         if (weights.Mountains >= weights.Hills && weights.Mountains >= weights.Plains && ridge > 0.50f)

@@ -9,4 +9,9 @@ public enum BlockKind : byte
     Grass = 4,
     Sand = 5,
     Water = 6,
+    Mud = 7,
+    Peat = 8,
+    Moss = 9,
+    Snow = 10,
+    Scree = 11,
 }

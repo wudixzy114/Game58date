@@ -361,7 +361,7 @@ public sealed class VoxelTerrainWorldRuntime
         var visualEntity = new Entity($"Chunk_{result.Coordinate.X}_{result.Coordinate.Z}");
         visualEntity.Transform.Position = chunkWorldPosition;
         modelFactory.AttachModels(visualEntity, result.MeshData);
-        environmentDecorator?.DecorateChunk(visualEntity, result.Data);
+        environmentDecorator?.DecorateChunk(visualEntity, result.Data, scene.Entities.Count > 0 ? FindPrimaryCameraPosition(scene) : null);
         scene.Entities.Add(visualEntity);
 
         Entity? collisionEntity = null;
@@ -387,5 +387,18 @@ public sealed class VoxelTerrainWorldRuntime
         VoxelChunkMeshData meshData = mesher.Build(data, generator.SampleBlockWorld);
         VoxelChunkCollisionData collisionData = collisionBuilder.Build(data);
         return new ChunkBuildResult(nextRevision++, coordinate, data, meshData, collisionData);
+    }
+
+    private static Vector3? FindPrimaryCameraPosition(Scene scene)
+    {
+        foreach (Entity entity in scene.Entities)
+        {
+            if (entity.Get<CameraComponent>() is not null)
+            {
+                return entity.Transform.Position;
+            }
+        }
+
+        return null;
     }
 }

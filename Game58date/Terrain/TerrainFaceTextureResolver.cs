@@ -32,6 +32,30 @@ public sealed class TerrainFaceTextureResolver
                     ? TerrainTextureTile.DrySoil
                     : TerrainTextureTile.Dirt,
 
+            BlockKind.Mud => isTopFace
+                ? TerrainTextureTile.Mud
+                : isBottomFace
+                    ? TerrainTextureTile.Peat
+                    : TerrainTextureTile.Mud,
+
+            BlockKind.Peat => isTopFace
+                ? TerrainTextureTile.Peat
+                : isBottomFace
+                    ? TerrainTextureTile.DrySoil
+                    : TerrainTextureTile.Peat,
+
+            BlockKind.Moss => isTopFace
+                ? TerrainTextureTile.ForestMoss
+                : isBottomFace
+                    ? TerrainTextureTile.Dirt
+                    : TerrainTextureTile.WetGrassSide,
+
+            BlockKind.Snow => isTopFace
+                ? TerrainTextureTile.SnowDust
+                : isBottomFace
+                    ? TerrainTextureTile.Stone
+                    : TerrainTextureTile.FrostGrass,
+
             BlockKind.Grass => isTopFace
                 ? TerrainTextureTile.GrassTop
                 : isBottomFace
@@ -43,6 +67,12 @@ public sealed class TerrainFaceTextureResolver
                 : isBottomFace
                     ? TerrainTextureTile.Sandstone
                     : TerrainTextureTile.Sand,
+
+            BlockKind.Scree => isTopFace
+                ? TerrainTextureTile.Scree
+                : isBottomFace
+                    ? TerrainTextureTile.Stone
+                    : TerrainTextureTile.Scree,
 
             _ => TerrainTextureTile.Gravel,
         };

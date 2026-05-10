@@ -110,6 +110,11 @@ public static class VoxelChunkOverrideSaveMapper
             or BlockKind.Dirt
             or BlockKind.Grass
             or BlockKind.Sand
-            or BlockKind.Water;
+            or BlockKind.Water
+            or BlockKind.Mud
+            or BlockKind.Peat
+            or BlockKind.Moss
+            or BlockKind.Snow
+            or BlockKind.Scree;
     }
 }

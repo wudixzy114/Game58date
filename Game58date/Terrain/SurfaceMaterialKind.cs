@@ -6,4 +6,8 @@ public enum SurfaceMaterialKind : byte
     Shore = 1,
     Cliff = 2,
     HighGrass = 3,
+    Wetland = 4,
+    ForestFloor = 5,
+    Scree = 6,
+    Alpine = 7,
 }

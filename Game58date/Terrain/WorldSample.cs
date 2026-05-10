@@ -11,6 +11,10 @@ public readonly record struct WorldSample(
     float Continentalness,
     float RidgeStrength,
     float ShoreWeight,
+    float WetlandWeight,
+    float WoodlandWeight,
     float HillWeight,
+    float ScreeWeight,
+    float AlpineWeight,
     float MountainWeight,
     float Slope);

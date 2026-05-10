@@ -231,7 +231,7 @@ public sealed class VoxelChunkMesher
 
     private static Vector2 GetUv(TerrainTextureTile tile, int cornerIndex, int width, int height)
     {
-        const float atlasTileCount = 12f;
+        const float atlasTileCount = 20f;
         float tileSize = 1f / atlasTileCount;
         float minU = (int)tile * tileSize;
         float maxU = minU + tileSize;
