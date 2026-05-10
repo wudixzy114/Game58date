@@ -128,7 +128,12 @@ public sealed class DevSceneRouterScript : SyncScript
             throw new InvalidOperationException("IContentManager service is unavailable.");
         }
 
-        Scene scene = content.Load<Scene>("MainScene");
+        Scene? scene = content.Load<Scene>("MainScene");
+        if (scene is null)
+        {
+            throw new InvalidOperationException("The asset 'MainScene' could not be loaded. Ensure it is registered in the package RootAssets.");
+        }
+
         SceneSystem.SceneInstance.RootScene = scene;
 
         string anchorName = target == RuntimeLaunchTarget.Prototype

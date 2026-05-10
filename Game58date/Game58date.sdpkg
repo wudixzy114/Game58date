@@ -18,4 +18,5 @@ TemplateFolders: []
 RootAssets:
     - 4be86ea6-8504-4ff2-91e0-870e7469b8ce:DevSceneRouter
     - 3d7f3e4c-6e02-4da7-8dc9-0ca8574f12a4:UIShowcaseScene
+    - c42aae6c-7640-4dae-a197-c0fb50843640:MainScene
     - 38d3b20d-e494-4b4e-96d0-2a8d16b06083:UIFont
