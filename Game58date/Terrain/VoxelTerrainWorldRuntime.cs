@@ -14,6 +14,7 @@ public sealed class VoxelTerrainWorldRuntime
     private readonly VoxelChunkMesher mesher;
     private readonly VoxelChunkCollisionBuilder collisionBuilder;
     private readonly VoxelChunkModelFactory modelFactory;
+    private readonly TerrainEnvironmentDecorator? environmentDecorator;
     private readonly VoxelChunkBuildPipeline buildPipeline;
     private readonly Dictionary<VoxelChunkCoordinate, VoxelChunkRuntime> chunks = new();
     private readonly HashSet<VoxelChunkCoordinate> desiredChunks = new();
@@ -24,7 +25,8 @@ public sealed class VoxelTerrainWorldRuntime
         VoxelChunkOverrideStore overrideStore,
         TerrainChunkGenerator generator,
         VoxelChunkMesher mesher,
-        VoxelChunkModelFactory modelFactory)
+        VoxelChunkModelFactory modelFactory,
+        TerrainEnvironmentDecorator? environmentDecorator = null)
     {
         this.settings = settings;
         this.overrideStore = overrideStore;
@@ -32,6 +34,7 @@ public sealed class VoxelTerrainWorldRuntime
         this.mesher = mesher;
         collisionBuilder = new VoxelChunkCollisionBuilder(settings);
         this.modelFactory = modelFactory;
+        this.environmentDecorator = environmentDecorator;
         buildPipeline = new VoxelChunkBuildPipeline(generator, mesher, collisionBuilder, settings.MaxConcurrentChunkBuilds);
         Stats = new TerrainRuntimeStats();
     }
@@ -325,6 +328,11 @@ public sealed class VoxelTerrainWorldRuntime
         return GetBlockWorld(worldX, worldY, worldZ);
     }
 
+    public WorldSample SampleSurfaceWorld(int worldX, int worldZ)
+    {
+        return generator.SampleSurfaceWorld(worldX, worldZ);
+    }
+
     private void RemoveActiveChunk(VoxelChunkCoordinate coordinate)
     {
         if (chunks.Remove(coordinate, out VoxelChunkRuntime? existing))
@@ -353,6 +361,7 @@ public sealed class VoxelTerrainWorldRuntime
         var visualEntity = new Entity($"Chunk_{result.Coordinate.X}_{result.Coordinate.Z}");
         visualEntity.Transform.Position = chunkWorldPosition;
         modelFactory.AttachModels(visualEntity, result.MeshData);
+        environmentDecorator?.DecorateChunk(visualEntity, result.Data);
         scene.Entities.Add(visualEntity);
 
         Entity? collisionEntity = null;

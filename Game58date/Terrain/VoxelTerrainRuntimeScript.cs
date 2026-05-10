@@ -25,6 +25,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
     private Quaternion spawnRotation = Quaternion.Identity;
     private GameSaveData? activeSaveData;
     private WorldLawRuntimeController? worldLawController;
+    private WeatherAmbienceController? weatherAmbienceController;
     private TerrainRuntimeStartupOptions startupOptions = new();
     private float autosaveCountdown;
     private int lastSavedOverrideRevision = -1;
@@ -52,13 +53,16 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         var generator = new TerrainChunkGenerator(settings, overrideStore);
         var mesher = new VoxelChunkMesher(settings);
         var modelFactory = new VoxelChunkModelFactory(Game.GraphicsDevice, Game.GraphicsContext, content);
-        worldRuntime = new VoxelTerrainWorldRuntime(settings, overrideStore, generator, mesher, modelFactory);
+        var environmentVisualFactory = new EnvironmentVisualFactory(Game.GraphicsDevice);
+        var environmentDecorator = new TerrainEnvironmentDecorator(settings, generator, environmentVisualFactory);
+        worldRuntime = new VoxelTerrainWorldRuntime(settings, overrideStore, generator, mesher, modelFactory, environmentDecorator);
 
         cameraEntity = sceneBootstrapper.EnsureCamera(scene);
         firstPersonController = sceneBootstrapper.EnsureFirstPersonController(cameraEntity, worldRuntime);
         Entity directionalLightEntity = sceneBootstrapper.EnsureTerrainLighting(scene);
         sceneBootstrapper.PruneLegacySceneEntities(scene);
         worldLawController = EnsureWorldLawController(cameraEntity, directionalLightEntity, activeSaveData.Gameplay);
+        weatherAmbienceController = EnsureWeatherAmbienceController(cameraEntity, worldRuntime, worldLawController, environmentVisualFactory);
         EnsureGameUiController();
 
         Vector3 desiredSpawnPosition = cameraEntity.Transform.Position;
@@ -209,6 +213,23 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         }
 
         controller.Initialize(WorldLawSaveMapper.BuildRuntimeState(gameplaySaveData), camera, directionalLightEntity);
+        return controller;
+    }
+
+    private WeatherAmbienceController EnsureWeatherAmbienceController(
+        Entity camera,
+        VoxelTerrainWorldRuntime runtime,
+        WorldLawRuntimeController? worldLawController,
+        EnvironmentVisualFactory visualFactory)
+    {
+        WeatherAmbienceController? controller = Entity.Get<WeatherAmbienceController>();
+        if (controller is null)
+        {
+            controller = new WeatherAmbienceController();
+            Entity.Add(controller);
+        }
+
+        controller.Initialize(runtime, camera, worldLawController, visualFactory);
         return controller;
     }
 

@@ -40,6 +40,11 @@ public sealed class TerrainChunkGenerator
         return chunk;
     }
 
+    public WorldSample SampleSurfaceWorld(int worldX, int worldZ)
+    {
+        return sampler.SampleSurface(worldX, worldZ);
+    }
+
     public BlockKind SampleBlockWorld(int worldX, int worldY, int worldZ)
     {
         if (worldY < 0 || worldY >= settings.ChunkHeight)
