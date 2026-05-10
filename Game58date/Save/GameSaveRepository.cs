@@ -67,6 +67,26 @@ public sealed class GameSaveRepository
         }
     }
 
+    public GameSaveData ResetSlot(string slotName, int preferredSeed)
+    {
+        string sanitizedSlotName = SanitizeSlotName(slotName);
+        string slotPath = GetSlotPath(sanitizedSlotName);
+
+        try
+        {
+            Directory.CreateDirectory(RootDirectory);
+            GameSaveData fresh = GameSaveData.CreateNew(sanitizedSlotName, preferredSeed);
+            Save(fresh);
+            GameSaveLogger.Logger.Info($"Reset save slot '{sanitizedSlotName}' at '{slotPath}' with seed {preferredSeed}.");
+            return fresh;
+        }
+        catch (Exception exception)
+        {
+            GameSaveLogger.Logger.Error($"Failed to reset save slot '{sanitizedSlotName}' at '{slotPath}'. Falling back to in-memory fresh state. {exception}");
+            return GameSaveData.CreateNew(sanitizedSlotName, preferredSeed);
+        }
+    }
+
     public bool Save(GameSaveData saveData)
     {
         string sanitizedSlotName = SanitizeSlotName(saveData.SlotName);

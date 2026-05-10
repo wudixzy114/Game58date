@@ -18,6 +18,7 @@ public sealed class PrototypeRuntimeGame : Game
 
     private TimeSpan fullscreenAttemptDelay = TimeSpan.FromMilliseconds(150);
     private bool hasAppliedFullscreen;
+    private readonly bool keepUnifiedFullscreen = true;
     private Int2 lastWindowedSize = new(1280, 720);
 
     protected override async Task LoadContent()
@@ -66,17 +67,18 @@ public sealed class PrototypeRuntimeGame : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (!hasAppliedFullscreen)
+        if (keepUnifiedFullscreen && !hasAppliedFullscreen)
         {
             fullscreenAttemptDelay -= gameTime.Elapsed;
             if (fullscreenAttemptDelay <= TimeSpan.Zero && Window.Visible && !Window.IsMinimized)
             {
-                Window.PreferredFullscreenSize = GetPreferredFullscreenSize();
-                Window.IsBorderLess = true;
-                Window.FullscreenIsBorderlessWindow = true;
-                Window.IsFullscreen = true;
+                EnsureUnifiedFullscreenWindowed();
                 hasAppliedFullscreen = true;
             }
+        }
+        else if (keepUnifiedFullscreen && Window.Visible && !Window.IsMinimized)
+        {
+            EnsureUnifiedFullscreenWindowed();
         }
 
         SynchronizePresenterWithWindow();
@@ -86,17 +88,42 @@ public sealed class PrototypeRuntimeGame : Game
     private void ConfigureWindowForGameplay()
     {
         Window.AllowUserResizing = false;
-        Window.IsBorderLess = false;
-        Window.FullscreenIsBorderlessWindow = true;
+        Window.IsBorderLess = keepUnifiedFullscreen;
+        Window.FullscreenIsBorderlessWindow = keepUnifiedFullscreen;
         Window.IsFullscreen = false;
 
         Rectangle bounds = Window.ClientBounds;
         Int2 currentSize = new(Math.Max(bounds.Width, 1), Math.Max(bounds.Height, 1));
         lastWindowedSize = currentSize;
-        Window.PreferredWindowedSize = currentSize;
+        Window.PreferredWindowedSize = keepUnifiedFullscreen
+            ? GetPreferredFullscreenSize()
+            : currentSize;
         Window.PreferredFullscreenSize = GetPreferredFullscreenSize();
 
         IsMouseVisible = false;
+    }
+
+    private void EnsureUnifiedFullscreenWindowed()
+    {
+        Int2 targetSize = GetPreferredFullscreenSize();
+        if (targetSize.X <= 0 || targetSize.Y <= 0)
+        {
+            return;
+        }
+
+        if (Window.IsFullscreen)
+        {
+            Window.IsFullscreen = false;
+        }
+
+        Window.PreferredWindowedSize = targetSize;
+        Window.FullscreenIsBorderlessWindow = true;
+        Window.IsBorderLess = true;
+
+        if (TryGetTargetOutputBounds(out Rectangle bounds))
+        {
+            Window.Position = new Int2(bounds.X, bounds.Y);
+        }
     }
 
     private void SynchronizePresenterWithWindow()
@@ -106,15 +133,16 @@ public sealed class PrototypeRuntimeGame : Game
             return;
         }
 
-        Int2 targetSize = Window.IsFullscreen
+        bool useUnifiedFullscreenWindow = keepUnifiedFullscreen && hasAppliedFullscreen;
+        Int2 targetSize = useUnifiedFullscreenWindow
             ? GetPreferredFullscreenSize()
             : GetCurrentClientSize();
 
-        if (Window.IsFullscreen)
+        if (useUnifiedFullscreenWindow)
         {
-            if (Window.PreferredFullscreenSize.X != targetSize.X || Window.PreferredFullscreenSize.Y != targetSize.Y)
+            if (Window.PreferredWindowedSize.X != targetSize.X || Window.PreferredWindowedSize.Y != targetSize.Y)
             {
-                Window.PreferredFullscreenSize = targetSize;
+                Window.PreferredWindowedSize = targetSize;
             }
         }
         else
@@ -145,6 +173,44 @@ public sealed class PrototypeRuntimeGame : Game
         }
 
         return lastWindowedSize;
+    }
+
+    private bool TryGetTargetOutputBounds(out Rectangle bounds)
+    {
+        bounds = default;
+        if (GraphicsDevice?.Adapter is null)
+        {
+            return false;
+        }
+
+        Int2 clientSize = GetCurrentClientSize();
+        Int2 windowPosition = Window.Position;
+        int centerX = windowPosition.X + clientSize.X / 2;
+        int centerY = windowPosition.Y + clientSize.Y / 2;
+
+        GraphicsOutput? selectedOutput = null;
+        foreach (var output in GraphicsDevice.Adapter.Outputs)
+        {
+            selectedOutput ??= output;
+
+            Rectangle candidateBounds = output.DesktopBounds;
+            if (centerX >= candidateBounds.X &&
+                centerX < candidateBounds.X + candidateBounds.Width &&
+                centerY >= candidateBounds.Y &&
+                centerY < candidateBounds.Y + candidateBounds.Height)
+            {
+                selectedOutput = output;
+                break;
+            }
+        }
+
+        if (selectedOutput is null)
+        {
+            return false;
+        }
+
+        bounds = selectedOutput.DesktopBounds;
+        return true;
     }
 
     private Int2 TryGetTargetOutputSize()

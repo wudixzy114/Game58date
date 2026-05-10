@@ -11,6 +11,7 @@ public sealed class TerrainRuntimeStartupOptions
     private const string WorldSeedEnvironmentVariable = "GAME58DATE_WORLD_SEED";
     private const string AutosaveEnvironmentVariable = "GAME58DATE_AUTOSAVE_SECONDS";
     private const float DefaultAutosaveIntervalSeconds = 12f;
+    private static TerrainRuntimeLaunchOverrides? pendingLaunchOverrides;
 
     public string SaveSlotName { get; init; } = GameSaveRepository.DefaultSlotName;
 
@@ -18,13 +19,38 @@ public sealed class TerrainRuntimeStartupOptions
 
     public float AutosaveIntervalSeconds { get; init; } = DefaultAutosaveIntervalSeconds;
 
+    public bool StartFreshJourney { get; init; }
+
+    public bool UseSavedPlayerPose { get; init; } = true;
+
     public bool AutosaveEnabled => AutosaveIntervalSeconds > 0f;
+
+    public static void SetPendingLaunchOverrides(TerrainRuntimeLaunchOverrides? launchOverrides)
+    {
+        pendingLaunchOverrides = launchOverrides;
+    }
 
     public static TerrainRuntimeStartupOptions FromEnvironment(TerrainGenerationSettings defaults)
     {
         string saveSlotName = ReadTrimmedEnvironmentVariable(SaveSlotEnvironmentVariable) ?? GameSaveRepository.DefaultSlotName;
         int preferredSeed = ReadIntEnvironmentVariable(WorldSeedEnvironmentVariable) ?? defaults.Seed;
         float autosaveIntervalSeconds = ReadFloatEnvironmentVariable(AutosaveEnvironmentVariable) ?? DefaultAutosaveIntervalSeconds;
+        TerrainRuntimeLaunchOverrides? launchOverrides = ConsumePendingLaunchOverrides();
+
+        if (!string.IsNullOrWhiteSpace(launchOverrides?.SaveSlotName))
+        {
+            saveSlotName = launchOverrides.SaveSlotName!.Trim();
+        }
+
+        if (launchOverrides?.PreferredSeed is int overriddenSeed)
+        {
+            preferredSeed = overriddenSeed;
+        }
+
+        if (launchOverrides?.AutosaveIntervalSeconds is float overriddenAutosave)
+        {
+            autosaveIntervalSeconds = overriddenAutosave;
+        }
 
         if (autosaveIntervalSeconds < 0f)
         {
@@ -32,15 +58,27 @@ public sealed class TerrainRuntimeStartupOptions
             autosaveIntervalSeconds = 0f;
         }
 
+        bool startFreshJourney = launchOverrides?.StartFreshJourney ?? false;
+        bool useSavedPlayerPose = launchOverrides?.UseSavedPlayerPose ?? !startFreshJourney;
+
         TerrainRuntimeLogger.Logger.Info(
-            $"Startup options resolved slot='{saveSlotName}' preferredSeed={preferredSeed} autosave={autosaveIntervalSeconds:0.##}s.");
+            $"Startup options resolved slot='{saveSlotName}' preferredSeed={preferredSeed} autosave={autosaveIntervalSeconds:0.##}s fresh={startFreshJourney} useSavedPose={useSavedPlayerPose}.");
 
         return new TerrainRuntimeStartupOptions
         {
             SaveSlotName = saveSlotName,
             PreferredSeed = preferredSeed,
             AutosaveIntervalSeconds = autosaveIntervalSeconds,
+            StartFreshJourney = startFreshJourney,
+            UseSavedPlayerPose = useSavedPlayerPose,
         };
+    }
+
+    private static TerrainRuntimeLaunchOverrides? ConsumePendingLaunchOverrides()
+    {
+        TerrainRuntimeLaunchOverrides? launchOverrides = pendingLaunchOverrides;
+        pendingLaunchOverrides = null;
+        return launchOverrides;
     }
 
     private static string? ReadTrimmedEnvironmentVariable(string variableName)

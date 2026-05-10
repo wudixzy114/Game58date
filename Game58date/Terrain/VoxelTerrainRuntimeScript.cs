@@ -26,6 +26,7 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
     private GameSaveData? activeSaveData;
     private WorldLawRuntimeController? worldLawController;
     private WeatherAmbienceController? weatherAmbienceController;
+    private GameUiRuntimeController? gameUiController;
     private TerrainRuntimeStartupOptions startupOptions = new();
     private float autosaveCountdown;
     private int lastSavedOverrideRevision = -1;
@@ -45,7 +46,9 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         simulation = Services.GetService<Simulation>();
 
         startupOptions = TerrainRuntimeStartupOptions.FromEnvironment(settings);
-        activeSaveData = saveRepository.LoadOrCreate(startupOptions.SaveSlotName, startupOptions.PreferredSeed);
+        activeSaveData = startupOptions.StartFreshJourney
+            ? saveRepository.ResetSlot(startupOptions.SaveSlotName, startupOptions.PreferredSeed)
+            : saveRepository.LoadOrCreate(startupOptions.SaveSlotName, startupOptions.PreferredSeed);
         settings = settings.WithSeed(activeSaveData.World.Seed ?? startupOptions.PreferredSeed);
         overrideStore.ReplaceAll(VoxelChunkOverrideSaveMapper.BuildOverrideSnapshot(activeSaveData.Terrain, settings));
         autosaveCountdown = startupOptions.AutosaveIntervalSeconds;
@@ -63,16 +66,16 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         sceneBootstrapper.PruneLegacySceneEntities(scene);
         worldLawController = EnsureWorldLawController(cameraEntity, directionalLightEntity, activeSaveData.Gameplay);
         weatherAmbienceController = EnsureWeatherAmbienceController(cameraEntity, worldRuntime, worldLawController, environmentVisualFactory);
-        EnsureGameUiController();
+        gameUiController = EnsureGameUiController();
 
         Vector3 desiredSpawnPosition = cameraEntity.Transform.Position;
-        if (activeSaveData.Player.EyePosition is { } savedEyePosition && savedEyePosition.IsFinite)
+        if (startupOptions.UseSavedPlayerPose && activeSaveData.Player.EyePosition is { } savedEyePosition && savedEyePosition.IsFinite)
         {
             desiredSpawnPosition = savedEyePosition.ToStrideVector3();
         }
 
         spawnRotation = cameraEntity.Transform.Rotation;
-        if (activeSaveData.Player.Rotation is { } savedRotation && savedRotation.IsFiniteAndNonZero)
+        if (startupOptions.UseSavedPlayerPose && activeSaveData.Player.Rotation is { } savedRotation && savedRotation.IsFiniteAndNonZero)
         {
             spawnRotation = Quaternion.Normalize(savedRotation.ToStrideQuaternion());
         }
@@ -93,6 +96,12 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         if (scene is null || cameraEntity is null || worldRuntime is null || firstPersonController is null)
         {
             return;
+        }
+
+        bool shouldEnableController = !(gameUiController?.ShouldSuspendPlayerControl ?? false);
+        if (firstPersonController.IsActiveMode != shouldEnableController)
+        {
+            firstPersonController.SetActiveMode(shouldEnableController);
         }
 
         worldRuntime.RefreshVisibleChunks(scene, firstPersonController.EyePosition, force: false);
@@ -233,15 +242,17 @@ public sealed class VoxelTerrainRuntimeScript : SyncScript
         return controller;
     }
 
-    private void EnsureGameUiController()
+    private GameUiRuntimeController EnsureGameUiController()
     {
         GameUiRuntimeController? uiController = Entity.Get<GameUiRuntimeController>();
         if (uiController is not null)
         {
-            return;
+            return uiController;
         }
 
-        Entity.Add(new GameUiRuntimeController());
+        uiController = new GameUiRuntimeController();
+        Entity.Add(uiController);
+        return uiController;
     }
 
     private static bool NearlyEqual(Vector3 left, Vector3 right)

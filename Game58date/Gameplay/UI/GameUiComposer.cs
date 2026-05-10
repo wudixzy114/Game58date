@@ -52,6 +52,8 @@ public sealed class GameUiComposer
     private Button? menuToggleButton;
     private Button? narrativeInputButton;
     private Button? debugHudButton;
+    private Button? returnToRouterButton;
+    private Button? uiVisibilityButton;
     private GameUiMeterWidgets? karmaMeter;
     private GameUiMeterWidgets? blessingMeter;
     private GameUiMeterWidgets? pathMeter;
@@ -114,6 +116,8 @@ public sealed class GameUiComposer
         SetButtonText(menuToggleButton, viewState.MenuToggleButtonText);
         SetButtonText(narrativeInputButton, viewState.NarrativeInputButtonText);
         SetButtonText(debugHudButton, viewState.DebugHudButtonText);
+        SetButtonText(returnToRouterButton, viewState.ReturnToRouterButtonText);
+        SetButtonText(uiVisibilityButton, viewState.UiVisibilityButtonText);
 
         if (intentInput is not null)
         {
@@ -155,6 +159,14 @@ public sealed class GameUiComposer
         UpdateMeter(blessingMeter, viewState.BlessingMeter);
         UpdateMeter(pathMeter, viewState.PathMeter);
         UpdateMeter(dangerMeter, viewState.DangerMeter);
+    }
+
+    public void SetVisible(bool visible)
+    {
+        if (root is not null)
+        {
+            root.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     private Canvas BuildRoot()
@@ -413,24 +425,38 @@ public sealed class GameUiComposer
         menuStack.Children.Add(menuSettingsText);
         menuStack.Children.Add(menuHintText);
 
-        var buttonRow = new StackPanel
+        var buttonRowTop = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Width = 604f,
             Height = 56f,
             Margin = new Thickness(0f, 24f, 0f, 0f),
         };
-        menuStack.Children.Add(buttonRow);
+        var buttonRowBottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Width = 604f,
+            Height = 56f,
+            Margin = new Thickness(0f, 12f, 0f, 0f),
+        };
+        menuStack.Children.Add(buttonRowTop);
+        menuStack.Children.Add(buttonRowBottom);
 
-        menuToggleButton = CreateButton("Open Atlas");
+        menuToggleButton = CreateButton("Resume Journey");
         narrativeInputButton = CreateButton("Enable Input");
         debugHudButton = CreateButton("Show Debug HUD");
+        returnToRouterButton = CreateButton("Return To Router");
+        uiVisibilityButton = CreateButton("Hide All UI");
         menuToggleButton.Click += HandleMenuToggleClicked;
         narrativeInputButton.Click += HandleNarrativeInputClicked;
         debugHudButton.Click += HandleDebugHudClicked;
-        buttonRow.Children.Add(menuToggleButton);
-        buttonRow.Children.Add(narrativeInputButton);
-        buttonRow.Children.Add(debugHudButton);
+        returnToRouterButton.Click += HandleReturnToRouterClicked;
+        uiVisibilityButton.Click += HandleUiVisibilityClicked;
+        buttonRowTop.Children.Add(menuToggleButton);
+        buttonRowTop.Children.Add(narrativeInputButton);
+        buttonRowTop.Children.Add(debugHudButton);
+        buttonRowBottom.Children.Add(returnToRouterButton);
+        buttonRowBottom.Children.Add(uiVisibilityButton);
 
         return canvas;
     }
@@ -597,6 +623,16 @@ public sealed class GameUiComposer
     private void HandleDebugHudClicked(object? sender, RoutedEventArgs e)
     {
         commandSink?.ToggleDebugHud();
+    }
+
+    private void HandleReturnToRouterClicked(object? sender, RoutedEventArgs e)
+    {
+        commandSink?.ReturnToRouter();
+    }
+
+    private void HandleUiVisibilityClicked(object? sender, RoutedEventArgs e)
+    {
+        commandSink?.ToggleUiVisibility();
     }
 
     private sealed class GameUiMeterWidgets

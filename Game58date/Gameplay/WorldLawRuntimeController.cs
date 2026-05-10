@@ -38,6 +38,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     private PerceptionSkillController? perceptionSkillController;
     private OmenPresentationController? omenPresentationController;
     private IGameUiNoticeSink? noticeSink;
+    private bool debugHudSuppressed;
 
     public WorldLawEngine? Engine { get; private set; }
 
@@ -326,7 +327,7 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
 
     private void DrawHud()
     {
-        if (!hudVisible || Engine is null)
+        if (!hudVisible || debugHudSuppressed || Engine is null)
         {
             return;
         }
@@ -502,6 +503,11 @@ public sealed class WorldLawRuntimeController : SyncScript, IInputEventListener,
     public void SetDebugHudVisible(bool visible)
     {
         hudVisible = visible;
+    }
+
+    public void SetDebugHudSuppressed(bool suppressed)
+    {
+        debugHudSuppressed = suppressed;
     }
 
     private void SubmitIntent(string rawIntent)

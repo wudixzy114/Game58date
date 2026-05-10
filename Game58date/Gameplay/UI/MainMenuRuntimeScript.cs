@@ -54,8 +54,10 @@ public sealed class MainMenuRuntimeScript : SyncScript, IMainMenuActionSink
         switch (action)
         {
             case MainMenuAction.Continue:
+                RuntimeSceneLauncher.Launch(Services, SceneSystem, RuntimeLaunchRequest.CreateContinueJourney());
+                break;
             case MainMenuAction.NewJourney:
-                RuntimeSceneLauncher.Launch(Services, SceneSystem, RuntimeLaunchTarget.Terrain);
+                RuntimeSceneLauncher.Launch(Services, SceneSystem, RuntimeLaunchRequest.CreateNewJourney());
                 break;
             case MainMenuAction.UiShowcase:
                 RuntimeSceneLauncher.Launch(Services, SceneSystem, RuntimeLaunchTarget.UiShowcase);

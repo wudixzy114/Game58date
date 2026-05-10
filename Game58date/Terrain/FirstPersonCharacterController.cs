@@ -387,6 +387,12 @@ public sealed class FirstPersonCharacterController : SyncScript
             return;
         }
 
+        if (LinearVelocity.Y > 0.05f)
+        {
+            IsGrounded = false;
+            return;
+        }
+
         if (TryResolveGroundedEyeY(position, GroundSnapDistance, out float groundedEyeY))
         {
             if (!MathUtil.NearEqual(position.Y, groundedEyeY))

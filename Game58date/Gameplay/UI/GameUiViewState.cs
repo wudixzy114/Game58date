@@ -70,6 +70,10 @@ public sealed class GameUiViewState
 
     public string DebugHudButtonText { get; set; } = "Show Debug HUD";
 
+    public string ReturnToRouterButtonText { get; set; } = "Return To Router";
+
+    public string UiVisibilityButtonText { get; set; } = "Hide All UI";
+
     public string ModeSummaryText { get; set; } = string.Empty;
 
     public string JourneySummaryText { get; set; } = string.Empty;

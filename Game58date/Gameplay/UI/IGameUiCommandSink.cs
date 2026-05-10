@@ -9,4 +9,8 @@ public interface IGameUiCommandSink
     void ToggleNarrativeInput();
 
     void ToggleDebugHud();
+
+    void ToggleUiVisibility();
+
+    void ReturnToRouter();
 }

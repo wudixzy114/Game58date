@@ -25,7 +25,8 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
         Mode = GameUiMode.Showcase,
         ModeTag = "UI Showcase",
         Subtitle = "A dedicated demonstration scene for the formal contextual UI system, including intent, omen, perception, atlas, and state gradients.",
-        HelpText = "Space next vignette  Q sense  Tab input  D draft  Esc atlas  H debug  F2..F6 quick motifs",
+        HelpText = "Space next vignette  Q sense  Tab input  D draft  Esc atlas  F9 hide UI  H debug  F2..F6 quick motifs",
+        MenuTitle = "Showcase Atlas",
         MenuHintText = "This atlas is part showcase, part standards reference. Evaluate typography, density, hierarchy, and transitions against the production target.",
     };
 
@@ -46,6 +47,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
     private bool wasTabPressed;
     private bool wasQPressed;
     private bool wasDPressed;
+    private bool wasHideUiPressed;
     private bool debugHudVisible;
 
     public override void Start()
@@ -83,12 +85,18 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
 
         uiContext.DebugHudVisible = debugHudVisible;
         SyncNotices();
+        composer.SetVisible(!uiContext.UiHidden);
         composer.Update(GameUiStateMapper.Map(state, uiContext, theme));
         DrawOverlayDebug();
     }
 
     public void ToggleUiMenu()
     {
+        if (uiContext.UiHidden)
+        {
+            uiContext.UiHidden = false;
+        }
+
         uiContext.MenuVisible = !uiContext.MenuVisible;
         uiContext.Mode = uiContext.MenuVisible ? GameUiMode.Atlas : GameUiMode.Showcase;
         noticeFeed.Add("Atlas", uiContext.MenuVisible ? "Showcase atlas opened." : "Returned to showcase playback.", GameUiNoticeSeverity.Info, 3f);
@@ -104,6 +112,24 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
     public void ToggleDebugHud()
     {
         debugHudVisible = !debugHudVisible;
+    }
+
+    public void ToggleUiVisibility()
+    {
+        uiContext.UiHidden = !uiContext.UiHidden;
+        if (uiContext.UiHidden)
+        {
+            uiContext.MenuVisible = false;
+            noticeFeed.Add("HUD", "Showcase UI hidden. Press F9 or Esc to restore it.", GameUiNoticeSeverity.Info, 3f);
+            return;
+        }
+
+        noticeFeed.Add("HUD", "Showcase UI restored.", GameUiNoticeSeverity.Positive, 3f);
+    }
+
+    public void ReturnToRouter()
+    {
+        RuntimeSceneLauncher.Launch(Services, SceneSystem, RuntimeLaunchTarget.DevRouter);
     }
 
     private void HandleInput()
@@ -151,6 +177,13 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
             RotateDraftText();
         }
         wasDPressed = dPressed;
+
+        bool hideUiPressed = Input.IsKeyPressed(Keys.F9);
+        if (hideUiPressed && !wasHideUiPressed)
+        {
+            ToggleUiVisibility();
+        }
+        wasHideUiPressed = hideUiPressed;
 
         if (Input.IsKeyPressed(Keys.H))
         {
@@ -303,6 +336,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
         state.HeroStage = state.Narrative.CurrentStage;
         state.Behavior.RecordedActions = Math.Max(state.Behavior.RecordedActions, 6);
         uiContext.MenuVisible = false;
+        uiContext.UiHidden = false;
         uiContext.DebugHudVisible = debugHudVisible;
     }
 

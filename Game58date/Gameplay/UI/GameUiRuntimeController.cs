@@ -12,8 +12,12 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink, IG
     private readonly GameUiNoticeFeed noticeFeed = new();
     private GameUiComposer? composer;
     private bool lastMenuTogglePressed;
+    private bool lastHideUiPressed;
+    private bool lastReturnToRouterPressed;
 
     public WorldLawRuntimeController? WorldLawController { get; private set; }
+
+    public bool ShouldSuspendPlayerControl => uiContext.MenuVisible;
 
     public override void Start()
     {
@@ -39,6 +43,8 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink, IG
         }
 
         HandleUiHotkeys();
+        composer.SetVisible(!uiContext.UiHidden);
+        WorldLawController.SetDebugHudSuppressed(uiContext.MenuVisible || uiContext.UiHidden);
         WorldLawRuntimeState state = WorldLawController.RuntimeState;
         uiContext.DebugHudVisible = WorldLawController.IsDebugHudVisible;
         uiContext.IntentDraftText = WorldLawController.CurrentIntentDraftText;
@@ -53,22 +59,38 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink, IG
 
     private void HandleUiHotkeys()
     {
-        bool menuPressed = Input.IsKeyPressed(Keys.Escape) || Input.IsKeyPressed(Keys.F10);
-        if (!menuPressed || lastMenuTogglePressed || composer is null)
+        bool hideUiPressed = Input.IsKeyPressed(Keys.F9);
+        if (hideUiPressed && !lastHideUiPressed)
         {
-            lastMenuTogglePressed = menuPressed;
-            return;
+            ToggleUiVisibility();
         }
+        lastHideUiPressed = hideUiPressed;
 
-        ToggleUiMenu();
-        lastMenuTogglePressed = true;
+        bool menuPressed = Input.IsKeyPressed(Keys.Escape) || Input.IsKeyPressed(Keys.F10);
+        if (menuPressed && !lastMenuTogglePressed && composer is not null)
+        {
+            ToggleUiMenu();
+        }
+        lastMenuTogglePressed = menuPressed;
+
+        bool returnToRouterPressed = Input.IsKeyPressed(Keys.R);
+        if (uiContext.MenuVisible && returnToRouterPressed && !lastReturnToRouterPressed)
+        {
+            ReturnToRouter();
+        }
+        lastReturnToRouterPressed = returnToRouterPressed;
     }
 
     public void ToggleUiMenu()
     {
+        if (uiContext.UiHidden)
+        {
+            uiContext.UiHidden = false;
+        }
+
         uiContext.MenuVisible = !uiContext.MenuVisible;
         uiContext.Mode = uiContext.MenuVisible ? GameUiMode.Atlas : GameUiMode.Exploration;
-        PushNotice("Atlas", uiContext.MenuVisible ? "System atlas opened." : "Returned to the exploration surface.", GameUiNoticeSeverity.Info, 3f);
+        PushNotice("Pause", uiContext.MenuVisible ? "Pause surface opened and mouse released." : "Returned to the exploration surface.", GameUiNoticeSeverity.Info, 3f);
     }
 
     public void ToggleNarrativeInput()
@@ -94,6 +116,25 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink, IG
         bool next = !WorldLawController.IsDebugHudVisible;
         WorldLawController.SetDebugHudVisible(next);
         uiContext.DebugHudVisible = next;
+    }
+
+    public void ToggleUiVisibility()
+    {
+        uiContext.UiHidden = !uiContext.UiHidden;
+        if (uiContext.UiHidden)
+        {
+            uiContext.MenuVisible = false;
+            uiContext.Mode = GameUiMode.Exploration;
+            PushNotice("HUD", "All runtime UI layers hidden. Press F9 or Esc to restore them.", GameUiNoticeSeverity.Info, 3f);
+            return;
+        }
+
+        PushNotice("HUD", "Runtime UI restored.", GameUiNoticeSeverity.Positive, 3f);
+    }
+
+    public void ReturnToRouter()
+    {
+        RuntimeSceneLauncher.Launch(Services, SceneSystem, RuntimeLaunchTarget.DevRouter);
     }
 
     public void PushNotice(string title, string body, GameUiNoticeSeverity severity, float seconds = 6f)
