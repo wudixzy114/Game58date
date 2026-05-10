@@ -43,7 +43,7 @@ Hierarchy:
                         Projection: Perspective
                         VerticalFieldOfView: 64.0
                         FarClipPlane: 800.0
-                        Slot: 56dca86c-a875-4d79-b332-8cde424bb0bb
+                        Slot: ba621455-cfc8-4120-85d0-22ed1553bf5c
         -   Entity:
                 Id: 5fb4b6dc-3f5d-4748-ac4f-0c3446ca6f86
                 Name: Sphere

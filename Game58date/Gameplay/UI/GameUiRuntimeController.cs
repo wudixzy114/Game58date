@@ -23,7 +23,7 @@ public sealed class GameUiRuntimeController : SyncScript, IGameUiCommandSink
         }
 
         composer = new GameUiComposer(theme);
-        composer.Attach(Entity, this);
+        composer.Attach(Entity, Services, this);
         uiContext.DebugHudVisible = WorldLawController.IsDebugHudVisible;
         composer.Update(GameUiStateMapper.Map(WorldLawController.RuntimeState, uiContext, theme));
     }

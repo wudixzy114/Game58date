@@ -25,6 +25,11 @@ public sealed class PrototypeRuntimeGame : Game
         await base.LoadContent();
 
         ConfigureWindowForGameplay();
+        if (IsDevRouterSceneActive())
+        {
+            return;
+        }
+
         RuntimeMode runtimeMode = ResolveRuntimeMode();
         if (runtimeMode == RuntimeMode.UiShowcase)
         {
@@ -217,5 +222,16 @@ public sealed class PrototypeRuntimeGame : Game
         }
 
         return RuntimeModeResolver.Resolve();
+    }
+
+    private bool IsDevRouterSceneActive()
+    {
+        Scene? scene = SceneSystem.SceneInstance.RootScene;
+        if (scene is null)
+        {
+            return false;
+        }
+
+        return scene.Entities.Any(entity => entity.Get<DevSceneRouterScript>() is not null);
     }
 }

@@ -1,7 +1,9 @@
 #nullable enable
 using System;
+using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
+using Stride.Graphics;
 using Stride.UI;
 using Stride.UI.Controls;
 using Stride.UI.Events;
@@ -12,6 +14,7 @@ namespace Game58date.Gameplay.UI;
 public sealed class GameUiComposer
 {
     private readonly GameUiTheme theme;
+    private SpriteFont? font;
 
     private UIComponent? uiComponent;
     private Canvas? root;
@@ -58,7 +61,7 @@ public sealed class GameUiComposer
         this.theme = theme ?? throw new ArgumentNullException(nameof(theme));
     }
 
-    public void Attach(Entity owner, IGameUiCommandSink sink)
+    public void Attach(Entity owner, IServiceRegistry services, IGameUiCommandSink sink)
     {
         commandSink = sink ?? throw new ArgumentNullException(nameof(sink));
         uiComponent = owner.Get<UIComponent>();
@@ -71,6 +74,7 @@ public sealed class GameUiComposer
             owner.Add(uiComponent);
         }
 
+        font = GameUiFontProvider.Load(services);
         root = BuildRoot();
         uiComponent.Page = new UIPage { RootElement = root };
     }
@@ -161,14 +165,17 @@ public sealed class GameUiComposer
         };
 
         Border veil = CreateBorder(theme.BackgroundVeil, theme.PanelBorder, new Thickness(0f, 0f, 0f, 0f), 1920f, 1080f);
+        UIElementExtensions.SetCanvasPinOrigin(veil, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(veil, new Vector3(0f, 0f, 0f));
         canvas.Children.Add(veil);
 
         Border topBand = CreateBorder(theme.BackgroundPattern, theme.PanelBorder, new Thickness(0f, 0f, 0f, 0f), 1920f, 190f);
+        UIElementExtensions.SetCanvasPinOrigin(topBand, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(topBand, new Vector3(0f, 0f, 0f));
         canvas.Children.Add(topBand);
 
         Border headerPanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 234f);
+        UIElementExtensions.SetCanvasPinOrigin(headerPanel, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(headerPanel, new Vector3(0.04f, 0.05f, 0f));
         canvas.Children.Add(headerPanel);
 
@@ -200,6 +207,7 @@ public sealed class GameUiComposer
         headerStack.Children.Add(biomeText);
 
         omenCalloutBorder = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 620f, 144f);
+        UIElementExtensions.SetCanvasPinOrigin(omenCalloutBorder, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(omenCalloutBorder, new Vector3(0.66f, 0.05f, 0f));
         canvas.Children.Add(omenCalloutBorder);
 
@@ -221,6 +229,7 @@ public sealed class GameUiComposer
         omenStack.Children.Add(omenDetailText);
 
         Border profilePanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 620f, 160f);
+        UIElementExtensions.SetCanvasPinOrigin(profilePanel, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(profilePanel, new Vector3(0.66f, 0.21f, 0f));
         canvas.Children.Add(profilePanel);
 
@@ -243,6 +252,7 @@ public sealed class GameUiComposer
         profileStack.Children.Add(intentText);
 
         Border metersPanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 194f);
+        UIElementExtensions.SetCanvasPinOrigin(metersPanel, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(metersPanel, new Vector3(0.04f, 0.28f, 0f));
         canvas.Children.Add(metersPanel);
 
@@ -265,6 +275,7 @@ public sealed class GameUiComposer
         dangerMeter = CreateMeterCard(meterGrid, 1, 1);
 
         Border narrativePanel = CreateBorder(theme.PanelBase, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 840f, 128f);
+        UIElementExtensions.SetCanvasPinOrigin(narrativePanel, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(narrativePanel, new Vector3(0.04f, 0.48f, 0f));
         canvas.Children.Add(narrativePanel);
 
@@ -285,6 +296,7 @@ public sealed class GameUiComposer
         narrativeStack.Children.Add(narrativeReasonText);
 
         Border bottomPanel = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 1320f, 256f);
+        UIElementExtensions.SetCanvasPinOrigin(bottomPanel, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(bottomPanel, new Vector3(0.04f, 0.70f, 0f));
         canvas.Children.Add(bottomPanel);
 
@@ -364,6 +376,7 @@ public sealed class GameUiComposer
         historyStack.Children.Add(historyEntryC);
 
         menuPanel = CreateBorder(theme.PanelElevated, theme.PanelBorder, new Thickness(2f, 2f, 2f, 2f), 664f, 468f);
+        UIElementExtensions.SetCanvasPinOrigin(menuPanel, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(menuPanel, new Vector3(0.48f, 0.17f, 0f));
         menuPanel.Visibility = Visibility.Collapsed;
         canvas.Children.Add(menuPanel);
@@ -487,6 +500,7 @@ public sealed class GameUiComposer
         return new TextBlock
         {
             Text = text,
+            Font = font,
             TextColor = color,
             TextSize = size,
         };

@@ -52,7 +52,7 @@ public sealed class GameUiShowcaseScript : SyncScript, IGameUiCommandSink
         SetupSceneReferences(scene);
 
         composer = new GameUiComposer(theme);
-        composer.Attach(Entity, this);
+        composer.Attach(Entity, Services, this);
 
         ApplyVignette(0);
         UpdateDraftText(ShowcasePrompts[0]);

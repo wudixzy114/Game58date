@@ -1,12 +1,17 @@
 #nullable enable
 using System;
+using System.Linq;
+using Game58date.Gameplay.UI;
+using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
 using Stride.Engine;
+using Stride.Graphics;
 using Stride.Input;
 using Stride.UI;
 using Stride.UI.Controls;
 using Stride.UI.Panels;
+using Game58date.Terrain;
 
 namespace Game58date.Gameplay;
 
@@ -20,9 +25,16 @@ public sealed class DevSceneRouterScript : SyncScript
     };
 
     private UIComponent? uiComponent;
+    private SpriteFont? font;
     private TextBlock? selectionText;
     private TextBlock? detailText;
     private TextBlock? hintText;
+    private Border? optionTerrain;
+    private Border? optionPrototype;
+    private Border? optionShowcase;
+    private TextBlock? optionTerrainText;
+    private TextBlock? optionPrototypeText;
+    private TextBlock? optionShowcaseText;
     private int selectedIndex;
     private bool wasUpPressed;
     private bool wasDownPressed;
@@ -35,6 +47,7 @@ public sealed class DevSceneRouterScript : SyncScript
     public override void Start()
     {
         Game.IsMouseVisible = true;
+        font = GameUiFontProvider.Load(Services);
         EnsureUi();
         UpdateTexts();
     }
@@ -87,12 +100,10 @@ public sealed class DevSceneRouterScript : SyncScript
                 LoadScene("UIShowcaseScene");
                 return;
             case RuntimeLaunchTarget.Prototype:
-                LoadScene("MainScene");
-                PrototypeRuntimeGame.PendingLaunchTarget = RuntimeLaunchTarget.Prototype;
+                LoadMainScene(RuntimeLaunchTarget.Prototype);
                 return;
             default:
-                LoadScene("MainScene");
-                PrototypeRuntimeGame.PendingLaunchTarget = RuntimeLaunchTarget.Terrain;
+                LoadMainScene(RuntimeLaunchTarget.Terrain);
                 return;
         }
     }
@@ -106,6 +117,40 @@ public sealed class DevSceneRouterScript : SyncScript
         }
 
         SceneSystem.SceneInstance.RootScene = content.Load<Scene>(sceneName);
+        Cancel();
+    }
+
+    private void LoadMainScene(RuntimeLaunchTarget target)
+    {
+        IContentManager? content = Services.GetService<IContentManager>();
+        if (content is null)
+        {
+            throw new InvalidOperationException("IContentManager service is unavailable.");
+        }
+
+        Scene scene = content.Load<Scene>("MainScene");
+        SceneSystem.SceneInstance.RootScene = scene;
+
+        string anchorName = target == RuntimeLaunchTarget.Prototype
+            ? "LegacyPrototypeRuntime"
+            : "PrototypeRuntime";
+
+        Entity? anchor = scene.Entities.FirstOrDefault(entity => entity.Name == anchorName);
+        if (anchor is null)
+        {
+            anchor = new Entity(anchorName);
+            if (target == RuntimeLaunchTarget.Prototype)
+            {
+                anchor.Add(new HeroJourneyPrototypeScript());
+            }
+            else
+            {
+                anchor.Add(new VoxelTerrainRuntimeScript());
+            }
+
+            scene.Entities.Add(anchor);
+        }
+
         Cancel();
     }
 
@@ -134,6 +179,7 @@ public sealed class DevSceneRouterScript : SyncScript
             BackgroundColor = new Color(0.04f, 0.05f, 0.07f, 0.94f),
             BorderThickness = new Thickness(0f, 0f, 0f, 0f),
         };
+        UIElementExtensions.SetCanvasPinOrigin(veil, new Vector3(0f, 0f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(veil, new Vector3(0f, 0f, 0f));
         root.Children.Add(veil);
 
@@ -145,9 +191,8 @@ public sealed class DevSceneRouterScript : SyncScript
             BorderColor = new Color(0.82f, 0.70f, 0.44f, 0.88f),
             BorderThickness = new Thickness(2f, 2f, 2f, 2f),
         };
+        UIElementExtensions.SetCanvasPinOrigin(card, new Vector3(0.5f, 0.5f, 0f));
         UIElementExtensions.SetCanvasRelativePosition(card, new Vector3(0.5f, 0.5f, 0f));
-        card.HorizontalAlignment = HorizontalAlignment.Center;
-        card.VerticalAlignment = VerticalAlignment.Center;
         root.Children.Add(card);
 
         var stack = new StackPanel
@@ -162,6 +207,7 @@ public sealed class DevSceneRouterScript : SyncScript
         stack.Children.Add(new TextBlock
         {
             Text = "GAME58DATE DEV ROUTER",
+            Font = font,
             TextSize = 34f,
             TextColor = new Color(0.96f, 0.93f, 0.86f, 1f),
         });
@@ -169,6 +215,7 @@ public sealed class DevSceneRouterScript : SyncScript
         stack.Children.Add(new TextBlock
         {
             Text = "Development startup scene. Choose which runtime slice to enter before the game systems attach.",
+            Font = font,
             TextSize = 16f,
             TextColor = new Color(0.72f, 0.72f, 0.70f, 1f),
             WrapText = true,
@@ -176,16 +223,34 @@ public sealed class DevSceneRouterScript : SyncScript
             Margin = new Thickness(0f, 12f, 0f, 0f),
         });
 
+        var optionsRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Width = 760f,
+            Height = 72f,
+            Margin = new Thickness(0f, 28f, 0f, 0f),
+        };
+        stack.Children.Add(optionsRow);
+
+        (optionTerrain, optionTerrainText) = CreateOptionCard("Terrain Runtime");
+        (optionPrototype, optionPrototypeText) = CreateOptionCard("Legacy Prototype");
+        (optionShowcase, optionShowcaseText) = CreateOptionCard("UI Showcase");
+        optionsRow.Children.Add(optionTerrain);
+        optionsRow.Children.Add(optionPrototype);
+        optionsRow.Children.Add(optionShowcase);
+
         selectionText = new TextBlock
         {
-            TextSize = 24f,
+            Font = font,
+            TextSize = 18f,
             TextColor = new Color(0.98f, 0.81f, 0.48f, 1f),
-            Margin = new Thickness(0f, 28f, 0f, 0f),
+            Margin = new Thickness(0f, 16f, 0f, 0f),
         };
         stack.Children.Add(selectionText);
 
         detailText = new TextBlock
         {
+            Font = font,
             TextSize = 16f,
             TextColor = new Color(0.86f, 0.88f, 0.91f, 1f),
             WrapText = true,
@@ -196,6 +261,7 @@ public sealed class DevSceneRouterScript : SyncScript
 
         hintText = new TextBlock
         {
+            Font = font,
             TextSize = 15f,
             TextColor = new Color(0.66f, 0.83f, 0.95f, 1f),
             WrapText = true,
@@ -212,10 +278,7 @@ public sealed class DevSceneRouterScript : SyncScript
         RuntimeLaunchTarget current = targets[selectedIndex];
         if (selectionText is not null)
         {
-            selectionText.Text =
-                $"[{(selectedIndex == 0 ? ">" : " ")}] Terrain Runtime\n" +
-                $"[{(selectedIndex == 1 ? ">" : " ")}] Legacy Prototype\n" +
-                $"[{(selectedIndex == 2 ? ">" : " ")}] UI Showcase";
+            selectionText.Text = $"Selected: {GetTargetTitle(current)}";
         }
 
         if (detailText is not null)
@@ -233,5 +296,66 @@ public sealed class DevSceneRouterScript : SyncScript
         {
             hintText.Text = "Use Up/Down or W/S to choose. Press Enter or Space to launch the selected runtime.";
         }
+
+        UpdateOptionCard(optionTerrain, optionTerrainText, 0, "Terrain Runtime");
+        UpdateOptionCard(optionPrototype, optionPrototypeText, 1, "Legacy Prototype");
+        UpdateOptionCard(optionShowcase, optionShowcaseText, 2, "UI Showcase");
+    }
+
+    private (Border Border, TextBlock Text) CreateOptionCard(string title)
+    {
+        var text = new TextBlock
+        {
+            Font = font,
+            Text = title,
+            TextSize = 18f,
+            TextColor = new Color(0.96f, 0.93f, 0.86f, 1f),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        var border = new Border
+        {
+            Width = 236f,
+            Height = 68f,
+            Margin = new Thickness(0f, 0f, 16f, 0f),
+            BackgroundColor = new Color(0.16f, 0.17f, 0.20f, 1f),
+            BorderColor = new Color(0.34f, 0.36f, 0.40f, 1f),
+            BorderThickness = new Thickness(2f, 2f, 2f, 2f),
+            Content = text,
+        };
+
+        return (border, text);
+    }
+
+    private void UpdateOptionCard(Border? border, TextBlock? text, int index, string title)
+    {
+        if (border is null || text is null)
+        {
+            return;
+        }
+
+        bool selected = selectedIndex == index;
+        border.BackgroundColor = selected
+            ? new Color(0.28f, 0.22f, 0.12f, 1f)
+            : new Color(0.16f, 0.17f, 0.20f, 1f);
+        border.BorderColor = selected
+            ? new Color(0.98f, 0.81f, 0.48f, 1f)
+            : new Color(0.34f, 0.36f, 0.40f, 1f);
+        text.TextColor = selected
+            ? new Color(1.0f, 0.95f, 0.82f, 1f)
+            : new Color(0.82f, 0.84f, 0.87f, 1f);
+        text.Text = selected ? $"> {title}" : title;
+    }
+
+    private static string GetTargetTitle(RuntimeLaunchTarget target)
+    {
+        return target switch
+        {
+            RuntimeLaunchTarget.Terrain => "Terrain Runtime",
+            RuntimeLaunchTarget.Prototype => "Legacy Prototype",
+            RuntimeLaunchTarget.UiShowcase => "UI Showcase",
+            _ => "Unknown",
+        };
     }
 }
