@@ -1,17 +1,14 @@
 #nullable enable
 using System;
-using System.Linq;
 using Game58date.Gameplay.UI;
 using Stride.Core;
 using Stride.Core.Mathematics;
-using Stride.Core.Serialization.Contents;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.Input;
 using Stride.UI;
 using Stride.UI.Controls;
 using Stride.UI.Panels;
-using Game58date.Terrain;
 
 namespace Game58date.Gameplay;
 
@@ -19,6 +16,7 @@ public sealed class DevSceneRouterScript : SyncScript
 {
     private readonly RuntimeLaunchTarget[] targets =
     {
+        RuntimeLaunchTarget.MainMenu,
         RuntimeLaunchTarget.Terrain,
         RuntimeLaunchTarget.Prototype,
         RuntimeLaunchTarget.UiShowcase,
@@ -32,9 +30,11 @@ public sealed class DevSceneRouterScript : SyncScript
     private Border? optionTerrain;
     private Border? optionPrototype;
     private Border? optionShowcase;
+    private Border? optionMainMenu;
     private TextBlock? optionTerrainText;
     private TextBlock? optionPrototypeText;
     private TextBlock? optionShowcaseText;
+    private TextBlock? optionMainMenuText;
     private int selectedIndex;
     private bool wasUpPressed;
     private bool wasDownPressed;
@@ -94,68 +94,7 @@ public sealed class DevSceneRouterScript : SyncScript
     {
         isLoading = true;
         RuntimeLaunchTarget target = targets[selectedIndex];
-        switch (target)
-        {
-            case RuntimeLaunchTarget.UiShowcase:
-                LoadScene("UIShowcaseScene");
-                return;
-            case RuntimeLaunchTarget.Prototype:
-                LoadMainScene(RuntimeLaunchTarget.Prototype);
-                return;
-            default:
-                LoadMainScene(RuntimeLaunchTarget.Terrain);
-                return;
-        }
-    }
-
-    private void LoadScene(string sceneName)
-    {
-        IContentManager? content = Services.GetService<IContentManager>();
-        if (content is null)
-        {
-            throw new InvalidOperationException("IContentManager service is unavailable.");
-        }
-
-        SceneSystem.SceneInstance.RootScene = content.Load<Scene>(sceneName);
-        Cancel();
-    }
-
-    private void LoadMainScene(RuntimeLaunchTarget target)
-    {
-        IContentManager? content = Services.GetService<IContentManager>();
-        if (content is null)
-        {
-            throw new InvalidOperationException("IContentManager service is unavailable.");
-        }
-
-        Scene? scene = content.Load<Scene>("MainScene");
-        if (scene is null)
-        {
-            throw new InvalidOperationException("The asset 'MainScene' could not be loaded. Ensure it is registered in the package RootAssets.");
-        }
-
-        SceneSystem.SceneInstance.RootScene = scene;
-
-        string anchorName = target == RuntimeLaunchTarget.Prototype
-            ? "LegacyPrototypeRuntime"
-            : "PrototypeRuntime";
-
-        Entity? anchor = scene.Entities.FirstOrDefault(entity => entity.Name == anchorName);
-        if (anchor is null)
-        {
-            anchor = new Entity(anchorName);
-            if (target == RuntimeLaunchTarget.Prototype)
-            {
-                anchor.Add(new HeroJourneyPrototypeScript());
-            }
-            else
-            {
-                anchor.Add(new VoxelTerrainRuntimeScript());
-            }
-
-            scene.Entities.Add(anchor);
-        }
-
+        RuntimeSceneLauncher.Launch(Services, SceneSystem, target);
         Cancel();
     }
 
@@ -228,28 +167,39 @@ public sealed class DevSceneRouterScript : SyncScript
             Margin = new Thickness(0f, 12f, 0f, 0f),
         });
 
-        var optionsRow = new StackPanel
+        var optionsRowTop = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Width = 760f,
             Height = 72f,
             Margin = new Thickness(0f, 28f, 0f, 0f),
         };
-        stack.Children.Add(optionsRow);
+        stack.Children.Add(optionsRowTop);
 
-        (optionTerrain, optionTerrainText) = CreateOptionCard("Terrain Runtime");
-        (optionPrototype, optionPrototypeText) = CreateOptionCard("Legacy Prototype");
-        (optionShowcase, optionShowcaseText) = CreateOptionCard("UI Showcase");
-        optionsRow.Children.Add(optionTerrain);
-        optionsRow.Children.Add(optionPrototype);
-        optionsRow.Children.Add(optionShowcase);
+        var optionsRowBottom = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Width = 760f,
+            Height = 72f,
+            Margin = new Thickness(0f, 12f, 0f, 0f),
+        };
+        stack.Children.Add(optionsRowBottom);
+
+        (optionMainMenu, optionMainMenuText) = CreateOptionCard("Main Menu", 364f);
+        (optionTerrain, optionTerrainText) = CreateOptionCard("Terrain Runtime", 364f);
+        (optionPrototype, optionPrototypeText) = CreateOptionCard("Legacy Prototype", 364f);
+        (optionShowcase, optionShowcaseText) = CreateOptionCard("UI Showcase", 364f);
+        optionsRowTop.Children.Add(optionMainMenu);
+        optionsRowTop.Children.Add(optionTerrain);
+        optionsRowBottom.Children.Add(optionPrototype);
+        optionsRowBottom.Children.Add(optionShowcase);
 
         selectionText = new TextBlock
         {
             Font = font,
             TextSize = 18f,
             TextColor = new Color(0.98f, 0.81f, 0.48f, 1f),
-            Margin = new Thickness(0f, 16f, 0f, 0f),
+            Margin = new Thickness(0f, 18f, 0f, 0f),
         };
         stack.Children.Add(selectionText);
 
@@ -290,6 +240,7 @@ public sealed class DevSceneRouterScript : SyncScript
         {
             detailText.Text = current switch
             {
+                RuntimeLaunchTarget.MainMenu => "Loads the new cinematic main menu scene, which will become the formal front door for the game.",
                 RuntimeLaunchTarget.Terrain => "Loads MainScene and attaches the voxel terrain runtime, world law runtime, save chain, and formal gameplay UI.",
                 RuntimeLaunchTarget.Prototype => "Loads MainScene and attaches the older HeroJourney prototype script for quick systemic experiments.",
                 RuntimeLaunchTarget.UiShowcase => "Loads the dedicated UIShowcaseScene and runs the curated UI feature presentation scene.",
@@ -302,12 +253,13 @@ public sealed class DevSceneRouterScript : SyncScript
             hintText.Text = "Use Up/Down or W/S to choose. Press Enter or Space to launch the selected runtime.";
         }
 
-        UpdateOptionCard(optionTerrain, optionTerrainText, 0, "Terrain Runtime");
-        UpdateOptionCard(optionPrototype, optionPrototypeText, 1, "Legacy Prototype");
-        UpdateOptionCard(optionShowcase, optionShowcaseText, 2, "UI Showcase");
+        UpdateOptionCard(optionMainMenu, optionMainMenuText, 0, "Main Menu");
+        UpdateOptionCard(optionTerrain, optionTerrainText, 1, "Terrain Runtime");
+        UpdateOptionCard(optionPrototype, optionPrototypeText, 2, "Legacy Prototype");
+        UpdateOptionCard(optionShowcase, optionShowcaseText, 3, "UI Showcase");
     }
 
-    private (Border Border, TextBlock Text) CreateOptionCard(string title)
+    private (Border Border, TextBlock Text) CreateOptionCard(string title, float width)
     {
         var text = new TextBlock
         {
@@ -321,7 +273,7 @@ public sealed class DevSceneRouterScript : SyncScript
 
         var border = new Border
         {
-            Width = 236f,
+            Width = width,
             Height = 68f,
             Margin = new Thickness(0f, 0f, 16f, 0f),
             BackgroundColor = new Color(0.16f, 0.17f, 0.20f, 1f),
@@ -357,6 +309,7 @@ public sealed class DevSceneRouterScript : SyncScript
     {
         return target switch
         {
+            RuntimeLaunchTarget.MainMenu => "Main Menu",
             RuntimeLaunchTarget.Terrain => "Terrain Runtime",
             RuntimeLaunchTarget.Prototype => "Legacy Prototype",
             RuntimeLaunchTarget.UiShowcase => "UI Showcase",
