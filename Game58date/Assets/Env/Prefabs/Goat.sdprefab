@@ -1,0 +1,37 @@
+!PrefabAsset
+Id: 0b5f1252-3584-4dd5-8aa6-22ef13fde609
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! ebdd674f-dea8-4662-baca-aeb8bcdf33b5
+        - ref!! 1711329e-6f6f-407c-8a64-794ec0a624e8
+    Parts:
+        -   Entity:
+                Id: ebdd674f-dea8-4662-baca-aeb8bcdf33b5
+                Name: Body
+                Components:
+                    035ff49b831e423b8d27565dedf0870b: !TransformComponent
+                        Id: fdd58628-26ac-455d-9d1a-776ba4593ad3
+                        Position: {X: 0, Y: 0.88, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.95, Y: 1, Z: 0.75}
+                        Children: {}
+                    b3e525f93e654df49fe16d820dc7e2ff: !ModelComponent
+                        Id: 853c1872-d447-4626-a207-7803af17c52c
+                        Model: 14811198-451e-477a-9d23-ff9b9142a435:Env/Models/Capsule_Goat
+                        Materials: {}
+        -   Entity:
+                Id: 1711329e-6f6f-407c-8a64-794ec0a624e8
+                Name: Head
+                Components:
+                    8d2ddce2d15b452ab8a47532fa75d8a1: !TransformComponent
+                        Id: 1fee9f75-4f90-4145-ab47-296af3d3883b
+                        Position: {X: 0.52, Y: 1.08, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.34, Y: 0.26, Z: 0.22}
+                        Children: {}
+                    42a65dc901094220a4519dd95bbd3be5: !ModelComponent
+                        Id: 0206740c-b938-4ac1-8aee-08db6719c693
+                        Model: 61b8a5bf-139a-4c30-98c1-8b5bff35a6c7:Env/Models/Cube_Goat
+                        Materials: {}

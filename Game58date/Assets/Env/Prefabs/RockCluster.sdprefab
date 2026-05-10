@@ -1,0 +1,52 @@
+!PrefabAsset
+Id: b0048b72-a4c3-44cb-9cbf-3c9751b01beb
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! a00509f8-e3fc-46a5-906b-240d812c21f6
+        - ref!! 03e57fe3-fdfa-411f-b550-664e809e7acb
+        - ref!! 553e3b16-b1a0-4a74-90b2-3616746a0a9f
+    Parts:
+        -   Entity:
+                Id: a00509f8-e3fc-46a5-906b-240d812c21f6
+                Name: RockA
+                Components:
+                    b425926397c94462a9ebc1014a7e10b0: !TransformComponent
+                        Id: 577d3622-3898-49bc-ac1c-fd9b69ff4087
+                        Position: {X: -0.25, Y: 0.28, Z: 0.12}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.75, Y: 0.56, Z: 0.55}
+                        Children: {}
+                    804b96b0614d439bbbc2bff518e0a6d6: !ModelComponent
+                        Id: ef7ebcbd-e2da-4b2e-8849-43ec4d838f14
+                        Model: 8d9c645b-0c0b-47b6-a882-b62b63507373:Env/Models/Sphere_Stone
+                        Materials: {}
+        -   Entity:
+                Id: 03e57fe3-fdfa-411f-b550-664e809e7acb
+                Name: RockB
+                Components:
+                    1ed02c9a35d3489da88e6a4385a01c7b: !TransformComponent
+                        Id: 144bfd1a-2419-4507-beae-34a8ed4be3c6
+                        Position: {X: 0.18, Y: 0.2, Z: -0.12}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.56, Y: 0.4, Z: 0.46}
+                        Children: {}
+                    8a9116a3a31d4c40a402aa4339e9da56: !ModelComponent
+                        Id: 7c72ac42-3f9a-489d-b6ba-d9113bb28df7
+                        Model: 8d9c645b-0c0b-47b6-a882-b62b63507373:Env/Models/Sphere_Stone
+                        Materials: {}
+        -   Entity:
+                Id: 553e3b16-b1a0-4a74-90b2-3616746a0a9f
+                Name: RockC
+                Components:
+                    1994f46c3aaf439499f1d54a882e321b: !TransformComponent
+                        Id: 70cf0f1f-8352-4600-bf79-a759dfeb2a0e
+                        Position: {X: 0.02, Y: 0.42, Z: 0.25}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.4, Y: 0.3, Z: 0.32}
+                        Children: {}
+                    4341054db3bb4f8dae198d2b6df179d6: !ModelComponent
+                        Id: 2455d0a3-3088-4d38-a9b2-d844eb3fc83b
+                        Model: 469906a2-a3e8-4136-a581-e10750075100:Env/Models/Cube_Stone
+                        Materials: {}

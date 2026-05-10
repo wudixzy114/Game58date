@@ -651,7 +651,13 @@ public sealed class TerrainEnvironmentDecorator
             ? Vector3.One
             : new Vector3(placement.Variant.HeightScale);
 
-        if (placement.Variant.Asset.UsesPlaceholderGeometry && placement.Variant.Kind is EnvironmentPropKind.Deer or EnvironmentPropKind.Goat)
+        if (entity.Get<EnvironmentDistanceCullingScript>() is EnvironmentDistanceCullingScript culling)
+        {
+            culling.ResetState();
+        }
+
+        if (placement.Variant.Asset.UsesPlaceholderGeometry &&
+            placement.Variant.Kind is EnvironmentPropKind.Deer or EnvironmentPropKind.Goat)
         {
             entity.Transform.Position += new Vector3(0f, (placement.Variant.HeightScale <= 0f ? 0f : placement.Variant.HeightScale) * 0.16f, 0f);
         }
@@ -666,6 +672,7 @@ public sealed class TerrainEnvironmentDecorator
             motion.RotationAmplitudeEuler = placement.Variant.RotationAmplitude;
             motion.Speed = placement.Variant.MotionSpeed;
             motion.Phase = placement.Variation * MathF.PI * 2f;
+            motion.RebindBaseTransform();
         }
     }
 

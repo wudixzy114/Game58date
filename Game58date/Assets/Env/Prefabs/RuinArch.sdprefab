@@ -1,0 +1,67 @@
+!PrefabAsset
+Id: bdade17f-bc4c-4c5f-8e16-bd064d93fd2e
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! 81a72449-6187-446b-a9dd-3d8597c4f993
+        - ref!! 5f0ff11c-1be0-4198-9e32-7c6d8f3963ba
+        - ref!! e401adcc-a312-4148-9fbb-4735ce054444
+        - ref!! e94bcddc-b14f-4983-809a-24fb9dc1bed8
+    Parts:
+        -   Entity:
+                Id: 81a72449-6187-446b-a9dd-3d8597c4f993
+                Name: PillarA
+                Components:
+                    e571c019c8bc49288e743e6f6a45d82c: !TransformComponent
+                        Id: 05294aaa-0998-4297-9e9f-25695a4b2740
+                        Position: {X: -0.7, Y: 1.25, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.42, Y: 2.5, Z: 0.42}
+                        Children: {}
+                    eba6c9a48877435ea5df69cc573185f0: !ModelComponent
+                        Id: b197089f-ac82-4bf2-98c9-63af65c59f2b
+                        Model: 5e0c3060-1bb5-48d3-a870-4da9a57259f8:Env/Models/Cube_RuinStone
+                        Materials: {}
+        -   Entity:
+                Id: 5f0ff11c-1be0-4198-9e32-7c6d8f3963ba
+                Name: PillarB
+                Components:
+                    ceb3ef5f6bdd4c4e83c9f0e74fd14bb1: !TransformComponent
+                        Id: 775fcecb-81a4-44cd-b35c-12589ff8b56e
+                        Position: {X: 0.7, Y: 1.12, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.42, Y: 2.24, Z: 0.42}
+                        Children: {}
+                    f72b5002a2d443198c3a29298b3cb594: !ModelComponent
+                        Id: 38f2f9be-fe09-46a2-8d1f-be7c1b17e3d1
+                        Model: 5e0c3060-1bb5-48d3-a870-4da9a57259f8:Env/Models/Cube_RuinStone
+                        Materials: {}
+        -   Entity:
+                Id: e401adcc-a312-4148-9fbb-4735ce054444
+                Name: Lintel
+                Components:
+                    4a63a1252cde4fe2b8266f7d5e4b9cab: !TransformComponent
+                        Id: 8b8ba1cf-4554-4ca9-b3af-bf8119696002
+                        Position: {X: 0, Y: 2.42, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.72, Y: 0.34, Z: 0.52}
+                        Children: {}
+                    857c811f120a4b7e911dc5356bd82dab: !ModelComponent
+                        Id: 7c26529d-1ed4-444a-9c21-838128a7ea6d
+                        Model: 5e0c3060-1bb5-48d3-a870-4da9a57259f8:Env/Models/Cube_RuinStone
+                        Materials: {}
+        -   Entity:
+                Id: e94bcddc-b14f-4983-809a-24fb9dc1bed8
+                Name: BrokenStone
+                Components:
+                    ec3ea3b0193a4aef80f9116236e1f4a8: !TransformComponent
+                        Id: 67e56007-3c88-4914-b46e-b0ea87e43a0b
+                        Position: {X: 1.22, Y: 0.34, Z: -0.18}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.42, Y: 0.32, Z: 0.46}
+                        Children: {}
+                    e0db41d348024abcb6cc7463f56db22d: !ModelComponent
+                        Id: e518e1d5-2853-4fac-9d8c-e8f914f990e6
+                        Model: 469906a2-a3e8-4136-a581-e10750075100:Env/Models/Cube_Stone
+                        Materials: {}

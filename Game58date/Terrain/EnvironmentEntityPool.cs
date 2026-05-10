@@ -51,10 +51,6 @@ public sealed class EnvironmentEntityPool
     {
         foreach (Entity child in parent.GetChildren())
         {
-            child.Transform.Position = Vector3.Zero;
-            child.Transform.RotationEulerXYZ = Vector3.Zero;
-            child.Transform.Scale = Vector3.One;
-
             if (child.Get<ModelComponent>() is ModelComponent modelComponent)
             {
                 modelComponent.Enabled = true;

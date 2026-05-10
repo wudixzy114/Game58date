@@ -1,0 +1,52 @@
+!PrefabAsset
+Id: 94c728b9-cb13-414c-90bc-aa96aff4b03a
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! d7f8584d-c600-4bb7-a294-fff34bfb9cd3
+        - ref!! d417054a-1b49-4872-802c-b0ded46de6ad
+        - ref!! b67a9d34-1ca9-4ee9-b589-4e76777fad37
+    Parts:
+        -   Entity:
+                Id: d7f8584d-c600-4bb7-a294-fff34bfb9cd3
+                Name: Body
+                Components:
+                    94b8376d747f4c0ba1a3cc56e05241ee: !TransformComponent
+                        Id: ff779044-45ca-44c3-8a30-d79a46698114
+                        Position: {X: 0, Y: 0.2, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.42, Y: 0.3, Z: 0.22}
+                        Children: {}
+                    867120142dab482796bb443c1ef8acc1: !ModelComponent
+                        Id: f0e97d52-a009-4ccf-b2b0-cd111eb83a3e
+                        Model: 74207b7f-238c-4140-8ced-2b0463177efa:Env/Models/Capsule_Gull
+                        Materials: {}
+        -   Entity:
+                Id: d417054a-1b49-4872-802c-b0ded46de6ad
+                Name: WingL
+                Components:
+                    b11c340ca3ed4416bc0c5e7908dcdd4b: !TransformComponent
+                        Id: b02422ca-c09b-4034-a8d8-32676f0dcac1
+                        Position: {X: 0, Y: 0.18, Z: -0.22}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.82, Y: 0.06, Z: 0.12}
+                        Children: {}
+                    731cfa134ab94ff1b6cab5482f7e99d6: !ModelComponent
+                        Id: 196610a5-6be4-4883-b205-642554b5f18b
+                        Model: bf7f10a1-a6e6-4e0b-8b71-784ebe91c78b:Env/Models/Cube_Gull
+                        Materials: {}
+        -   Entity:
+                Id: b67a9d34-1ca9-4ee9-b589-4e76777fad37
+                Name: WingR
+                Components:
+                    1a3fa399fd59420eb5b20b2350c4ba95: !TransformComponent
+                        Id: 45dea6d4-0dc4-4ba4-a5d9-8f754c0d6ae0
+                        Position: {X: 0, Y: 0.18, Z: 0.22}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.82, Y: 0.06, Z: 0.12}
+                        Children: {}
+                    f6941628fe03425d871ef840677a38f0: !ModelComponent
+                        Id: e724a5c8-1010-467e-8d7a-270b1082cc03
+                        Model: bf7f10a1-a6e6-4e0b-8b71-784ebe91c78b:Env/Models/Cube_Gull
+                        Materials: {}

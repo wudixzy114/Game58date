@@ -1,0 +1,37 @@
+!PrefabAsset
+Id: 488319ba-7af6-4389-a7ee-74309ff153be
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! 4adfca39-528d-4041-8241-43d65aa416b6
+        - ref!! e2ceeaaf-681d-4ad6-8e98-494ce4a66028
+    Parts:
+        -   Entity:
+                Id: 4adfca39-528d-4041-8241-43d65aa416b6
+                Name: BushA
+                Components:
+                    c1d1e9f5ffa44da58dbc827bbe317437: !TransformComponent
+                        Id: 9872fea6-e22a-491d-91f6-2212b6ca065c
+                        Position: {X: 0, Y: 0.55, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.05, Y: 0.7, Z: 1.05}
+                        Children: {}
+                    91061283a949452d9f27f5cb26c695d5: !ModelComponent
+                        Id: 0c973b78-d054-4b23-8797-62e6e82f5fef
+                        Model: b4ffe144-4d98-4a8b-b0b6-636db438d0fc:Env/Models/Sphere_Leaf
+                        Materials: {}
+        -   Entity:
+                Id: e2ceeaaf-681d-4ad6-8e98-494ce4a66028
+                Name: BushB
+                Components:
+                    bca2e21cc65149da87d8d5e92035c561: !TransformComponent
+                        Id: 4bb13ddb-5b9b-483a-a793-e4ffdd121ef3
+                        Position: {X: 0.35, Y: 0.78, Z: -0.15}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.7, Y: 0.48, Z: 0.7}
+                        Children: {}
+                    d8151411eb494f32adfbfcb52ecd5e0d: !ModelComponent
+                        Id: 9e7b8972-58d7-4b47-b9a5-e0e396441bb8
+                        Model: b4ffe144-4d98-4a8b-b0b6-636db438d0fc:Env/Models/Sphere_Leaf
+                        Materials: {}

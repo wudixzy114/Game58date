@@ -1,0 +1,37 @@
+!PrefabAsset
+Id: 444d6cd6-3a87-49c7-a063-be7e3296f37d
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! a20d1f6c-8422-4314-8880-1243a4eba383
+        - ref!! 6a68f2f2-116f-4eb0-8297-966a1bffa4a9
+    Parts:
+        -   Entity:
+                Id: a20d1f6c-8422-4314-8880-1243a4eba383
+                Name: Body
+                Components:
+                    9f78653508624b35a83c06be882f1e9c: !TransformComponent
+                        Id: 297b5827-5c63-4c80-854b-8821d66d23d1
+                        Position: {X: 0, Y: 1, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.2, Y: 1.2, Z: 0.85}
+                        Children: {}
+                    2016f0bd44904ee29c236417f467f066: !ModelComponent
+                        Id: f94838f2-0cd2-4386-8413-0a48d4a2b7f5
+                        Model: 7a9d597e-351e-4b2e-96e5-233b2f84a043:Env/Models/Capsule_Deer
+                        Materials: {}
+        -   Entity:
+                Id: 6a68f2f2-116f-4eb0-8297-966a1bffa4a9
+                Name: Head
+                Components:
+                    a446a9f19f474605b71c22e0581f03bf: !TransformComponent
+                        Id: b04ea6db-8940-4769-b61b-70a7f57047ac
+                        Position: {X: 0.68, Y: 1.44, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.46, Y: 0.28, Z: 0.24}
+                        Children: {}
+                    226d1c09cace4131b0e3f88f4b332ec6: !ModelComponent
+                        Id: b3f5b9ca-ef98-4cc1-91ac-3d979c2ef09e
+                        Model: b797fcdc-fc6f-4f74-bb52-5478b570ed08:Env/Models/Cube_Deer
+                        Materials: {}

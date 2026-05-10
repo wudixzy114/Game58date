@@ -1,0 +1,52 @@
+!PrefabAsset
+Id: b36cdb62-d79b-4615-9ef2-8c0ecab4cc26
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! 7d4d0854-349d-419d-ab5b-34c9a5650407
+        - ref!! 87b871ec-2b9b-4e80-9a79-fd836724a52b
+        - ref!! 1c7cecb0-46a5-44d3-9070-a70edf2e75bd
+    Parts:
+        -   Entity:
+                Id: 7d4d0854-349d-419d-ab5b-34c9a5650407
+                Name: Trunk
+                Components:
+                    95c364aceac84d5ab140ba2ecf6bc359: !TransformComponent
+                        Id: 3d0789f4-1404-4bce-ac31-1d237a2a500e
+                        Position: {X: 0, Y: 1.25, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.42, Y: 2.5, Z: 0.42}
+                        Children: {}
+                    48e296fa091042409ffc622217998e0d: !ModelComponent
+                        Id: e2cbeea0-452f-4595-a5e7-286f8f22fb29
+                        Model: 0281f2b2-6809-48a5-99a6-477e300ae82d:Env/Models/Cylinder_Bark
+                        Materials: {}
+        -   Entity:
+                Id: 87b871ec-2b9b-4e80-9a79-fd836724a52b
+                Name: CanopyA
+                Components:
+                    ec243462af7e4de681283bce031d6f99: !TransformComponent
+                        Id: 7c6b175d-0ef0-4f87-bd00-11be1966094a
+                        Position: {X: 0, Y: 3.25, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.85, Y: 1.45, Z: 1.85}
+                        Children: {}
+                    388d605ad44349e0a19f34a922644ae2: !ModelComponent
+                        Id: 829dd9af-6b29-42a4-83ca-78d7dbca23b6
+                        Model: b4ffe144-4d98-4a8b-b0b6-636db438d0fc:Env/Models/Sphere_Leaf
+                        Materials: {}
+        -   Entity:
+                Id: 1c7cecb0-46a5-44d3-9070-a70edf2e75bd
+                Name: CanopyB
+                Components:
+                    b31fed677a06488c8883c7230ec065b3: !TransformComponent
+                        Id: af8a2e1f-a789-4a07-81f0-57fa78baa66a
+                        Position: {X: 0.35, Y: 4.15, Z: -0.15}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.15, Y: 0.95, Z: 1.15}
+                        Children: {}
+                    f43cdf79f5fa40a9968de4761350a1df: !ModelComponent
+                        Id: 73831635-21ac-4318-bc08-4a205c2266e4
+                        Model: b4ffe144-4d98-4a8b-b0b6-636db438d0fc:Env/Models/Sphere_Leaf
+                        Materials: {}

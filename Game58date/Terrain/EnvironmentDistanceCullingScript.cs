@@ -19,7 +19,7 @@ public sealed class EnvironmentDistanceCullingScript : SyncScript
     {
         modelComponents.Clear();
         CollectModelComponents(Entity, modelComponents);
-        ApplyVisibility(true);
+        ResetState();
     }
 
     public override void Update()
@@ -54,6 +54,12 @@ public sealed class EnvironmentDistanceCullingScript : SyncScript
         {
             modelComponent.Enabled = visible;
         }
+    }
+
+    public void ResetState()
+    {
+        cameraEntity = null;
+        ApplyVisibility(true);
     }
 
     private static void CollectModelComponents(Entity entity, List<ModelComponent> components)

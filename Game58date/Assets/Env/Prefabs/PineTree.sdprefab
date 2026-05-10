@@ -1,0 +1,67 @@
+!PrefabAsset
+Id: 07f50854-154c-49cf-b5e1-5d52753a9f41
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! 7dcb3017-3bc5-4a95-8e4a-5f734ffcdcd1
+        - ref!! 4a9b9ee5-2251-465e-9665-99a08a597d78
+        - ref!! b1f71b0c-1a5c-44cd-b6b6-c5b31080cf65
+        - ref!! 2c970a8f-7942-4c86-93bb-11fffe47af62
+    Parts:
+        -   Entity:
+                Id: 7dcb3017-3bc5-4a95-8e4a-5f734ffcdcd1
+                Name: Trunk
+                Components:
+                    9933cacc05324cf39abf68b271625e00: !TransformComponent
+                        Id: b7d24c8d-66d7-4852-82c0-eff5224ec9c9
+                        Position: {X: 0, Y: 1.5, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.35, Y: 3, Z: 0.35}
+                        Children: {}
+                    a5a38ef2e7e04e0f886e1cbcb520a8ac: !ModelComponent
+                        Id: 9e743c4c-cf94-48d6-8c2b-6ba05bed3cad
+                        Model: 0281f2b2-6809-48a5-99a6-477e300ae82d:Env/Models/Cylinder_Bark
+                        Materials: {}
+        -   Entity:
+                Id: 4a9b9ee5-2251-465e-9665-99a08a597d78
+                Name: NeedlesA
+                Components:
+                    c0a498c883a14032af091c104d568f17: !TransformComponent
+                        Id: 8b7a3d20-f741-4b44-8181-4b2f19542c2e
+                        Position: {X: 0, Y: 2.25, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.3, Y: 1, Z: 1.3}
+                        Children: {}
+                    eab69ae7b0be413ba465c4ba70ced831: !ModelComponent
+                        Id: 631d18f2-81e9-4cc4-8f5c-c7d9b5c125ba
+                        Model: 1c4aa9c0-0510-49d0-a8d2-ec70109aaf95:Env/Models/Cone_Needle
+                        Materials: {}
+        -   Entity:
+                Id: b1f71b0c-1a5c-44cd-b6b6-c5b31080cf65
+                Name: NeedlesB
+                Components:
+                    e61ba660645f4253b66ac8ddf875b210: !TransformComponent
+                        Id: d4390874-c351-4550-ab65-13902edccaaa
+                        Position: {X: 0, Y: 3.35, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1, Y: 0.95, Z: 1}
+                        Children: {}
+                    46a8d4fc1348430b849f887cfd4c4721: !ModelComponent
+                        Id: 4440191e-554d-4421-8734-549f86d6dc5c
+                        Model: 1c4aa9c0-0510-49d0-a8d2-ec70109aaf95:Env/Models/Cone_Needle
+                        Materials: {}
+        -   Entity:
+                Id: 2c970a8f-7942-4c86-93bb-11fffe47af62
+                Name: NeedlesC
+                Components:
+                    74bfd057d4e444d981a6ad314bc3d794: !TransformComponent
+                        Id: b5633cc9-2ac6-4b02-9fd6-184a243b8249
+                        Position: {X: 0, Y: 4.2, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.66, Y: 0.78, Z: 0.66}
+                        Children: {}
+                    2ba32baea6f34f85b2d1f3d7518a3d1e: !ModelComponent
+                        Id: 297576bd-90ff-4bdd-891e-faa8c0bcfd2c
+                        Model: 1c4aa9c0-0510-49d0-a8d2-ec70109aaf95:Env/Models/Cone_Needle
+                        Materials: {}

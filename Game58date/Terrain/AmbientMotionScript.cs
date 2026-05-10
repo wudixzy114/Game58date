@@ -21,8 +21,7 @@ public sealed class AmbientMotionScript : SyncScript
 
     public override void Start()
     {
-        basePosition = Entity.Transform.Position;
-        baseRotationEuler = Entity.Transform.RotationEulerXYZ;
+        RebindBaseTransform();
     }
 
     public override void Update()
@@ -41,5 +40,12 @@ public sealed class AmbientMotionScript : SyncScript
             RotationAmplitudeEuler.X * secondaryWave,
             RotationAmplitudeEuler.Y * primaryWave,
             RotationAmplitudeEuler.Z * MathF.Sin(elapsedSeconds * (Speed * 0.49f) + Phase));
+    }
+
+    public void RebindBaseTransform()
+    {
+        basePosition = Entity.Transform.Position;
+        baseRotationEuler = Entity.Transform.RotationEulerXYZ;
+        elapsedSeconds = 0f;
     }
 }

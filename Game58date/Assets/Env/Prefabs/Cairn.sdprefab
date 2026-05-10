@@ -1,0 +1,52 @@
+!PrefabAsset
+Id: 2f892cd8-b4b9-4e13-882f-65cbdcd32ea5
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! 0bc71cd0-05dd-492e-8c5e-64ca28fed825
+        - ref!! 6095b0b5-e2f7-4534-be0e-f4f4a8dd13c2
+        - ref!! cf13bfd4-0451-4c1e-b2c6-a9f9de2268a9
+    Parts:
+        -   Entity:
+                Id: 0bc71cd0-05dd-492e-8c5e-64ca28fed825
+                Name: Base
+                Components:
+                    36d9faf8a28242418b84cd37b56f2e1c: !TransformComponent
+                        Id: d6f162fc-6846-4b54-b42f-41a0fde31611
+                        Position: {X: 0, Y: 0.24, Z: 0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.1, Y: 0.48, Z: 1.1}
+                        Children: {}
+                    eb4a2aea244d4387af59c653efedc2c2: !ModelComponent
+                        Id: 548307e2-c29e-4308-893c-6f6a4f011658
+                        Model: 5e0c3060-1bb5-48d3-a870-4da9a57259f8:Env/Models/Cube_RuinStone
+                        Materials: {}
+        -   Entity:
+                Id: 6095b0b5-e2f7-4534-be0e-f4f4a8dd13c2
+                Name: Mid
+                Components:
+                    a58855ce416b40e496646a11420195aa: !TransformComponent
+                        Id: cf8d874b-8307-494d-af00-85ddc1729fa5
+                        Position: {X: 0.08, Y: 0.74, Z: -0.05}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.74, Y: 0.36, Z: 0.74}
+                        Children: {}
+                    3226cc18b7f0446d8138444a5cd82e72: !ModelComponent
+                        Id: b7d248ee-5357-4506-b027-6e7938e02b06
+                        Model: 8d9c645b-0c0b-47b6-a882-b62b63507373:Env/Models/Sphere_Stone
+                        Materials: {}
+        -   Entity:
+                Id: cf13bfd4-0451-4c1e-b2c6-a9f9de2268a9
+                Name: Top
+                Components:
+                    79801e9de96341dca6207692b07bb26a: !TransformComponent
+                        Id: b9c14445-7e8c-409c-b575-55e6c6a5254b
+                        Position: {X: -0.04, Y: 1.15, Z: 0.08}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 0.44, Y: 0.26, Z: 0.44}
+                        Children: {}
+                    438bf6c16d6c488dbd0ed297b76b375f: !ModelComponent
+                        Id: f7e93289-11e2-4afa-bd64-9876b448d6e6
+                        Model: 8d9c645b-0c0b-47b6-a882-b62b63507373:Env/Models/Sphere_Stone
+                        Materials: {}
