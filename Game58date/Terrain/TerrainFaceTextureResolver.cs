@@ -5,7 +5,7 @@ namespace Game58date.Terrain;
 
 public sealed class TerrainFaceTextureResolver
 {
-    public TerrainTextureTile Resolve(BlockKind block, Vector3 faceNormal, bool isFaceExposedToSky)
+    public TerrainTextureTile Resolve(BlockKind block, Vector3 faceNormal, bool isFaceExposedToSky, int worldX, int worldY, int worldZ)
     {
         if (block == BlockKind.Water)
         {
@@ -19,42 +19,59 @@ public sealed class TerrainFaceTextureResolver
 
         bool isTopFace = faceNormal.Y > 0.5f;
         bool isBottomFace = faceNormal.Y < -0.5f;
+        float variation = Hash01(worldX, worldY, worldZ, 991);
 
         return block switch
         {
-            BlockKind.Stone => isTopFace && isFaceExposedToSky
-                ? TerrainTextureTile.MossyStone
-                : TerrainTextureTile.Stone,
+            BlockKind.Stone => ResolveStoneTile(isTopFace, isFaceExposedToSky, variation),
 
             BlockKind.Dirt => isTopFace
-                ? TerrainTextureTile.RichSoil
+                ? variation < 0.46f
+                    ? TerrainTextureTile.RichSoil
+                    : TerrainTextureTile.RootSoil
                 : isBottomFace
                     ? TerrainTextureTile.DrySoil
                     : TerrainTextureTile.Dirt,
 
             BlockKind.Mud => isTopFace
-                ? TerrainTextureTile.Mud
+                ? variation < 0.58f
+                    ? TerrainTextureTile.Mud
+                    : TerrainTextureTile.WetMud
                 : isBottomFace
-                    ? TerrainTextureTile.Peat
-                    : TerrainTextureTile.Mud,
+                    ? variation < 0.52f
+                        ? TerrainTextureTile.Peat
+                        : TerrainTextureTile.ColdPeat
+                    : variation < 0.54f
+                        ? TerrainTextureTile.Mud
+                        : TerrainTextureTile.WetMud,
 
             BlockKind.Peat => isTopFace
-                ? TerrainTextureTile.Peat
+                ? variation < 0.48f
+                    ? TerrainTextureTile.Peat
+                    : TerrainTextureTile.ColdPeat
                 : isBottomFace
                     ? TerrainTextureTile.DrySoil
-                    : TerrainTextureTile.Peat,
+                    : variation < 0.48f
+                        ? TerrainTextureTile.Peat
+                        : TerrainTextureTile.ColdPeat,
 
             BlockKind.Moss => isTopFace
-                ? TerrainTextureTile.ForestMoss
+                ? variation < 0.52f
+                    ? TerrainTextureTile.ForestMoss
+                    : TerrainTextureTile.DarkForestMoss
                 : isBottomFace
                     ? TerrainTextureTile.Dirt
                     : TerrainTextureTile.WetGrassSide,
 
             BlockKind.Snow => isTopFace
-                ? TerrainTextureTile.SnowDust
+                ? variation < 0.54f
+                    ? TerrainTextureTile.SnowDust
+                    : TerrainTextureTile.BlueSnow
                 : isBottomFace
                     ? TerrainTextureTile.Stone
-                    : TerrainTextureTile.FrostGrass,
+                    : variation < 0.46f
+                        ? TerrainTextureTile.FrostGrass
+                        : TerrainTextureTile.TundraSoil,
 
             BlockKind.Grass => isTopFace
                 ? TerrainTextureTile.GrassTop
@@ -69,12 +86,38 @@ public sealed class TerrainFaceTextureResolver
                     : TerrainTextureTile.Sand,
 
             BlockKind.Scree => isTopFace
-                ? TerrainTextureTile.Scree
+                ? variation < 0.50f
+                    ? TerrainTextureTile.Scree
+                    : TerrainTextureTile.BrokenScree
                 : isBottomFace
                     ? TerrainTextureTile.Stone
-                    : TerrainTextureTile.Scree,
+                    : variation < 0.50f
+                        ? TerrainTextureTile.Scree
+                        : TerrainTextureTile.BrokenScree,
 
             _ => TerrainTextureTile.Gravel,
         };
+    }
+
+    private static TerrainTextureTile ResolveStoneTile(bool isTopFace, bool isFaceExposedToSky, float variation)
+    {
+        if (isTopFace && isFaceExposedToSky)
+        {
+            return variation < 0.38f
+                ? TerrainTextureTile.MossyStone
+                : TerrainTextureTile.WeatheredStone;
+        }
+
+        return variation > 0.82f
+            ? TerrainTextureTile.WeatheredStone
+            : TerrainTextureTile.Stone;
+    }
+
+    private static float Hash01(int x, int y, int z, int seed)
+    {
+        int hash = x * 374761393 + y * 668265263 + z * 2147385601 + seed * 1442695041;
+        hash = (hash ^ (hash >> 13)) * 1274126177;
+        hash ^= hash >> 16;
+        return (hash & 1023) / 1023f;
     }
 }

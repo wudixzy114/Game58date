@@ -1,3 +1,5 @@
+using System;
+
 namespace Game58date.Terrain;
 
 public sealed class SurfaceMaterialResolver
@@ -11,37 +13,43 @@ public sealed class SurfaceMaterialResolver
 
     public SurfaceMaterialKind Resolve(WorldSample sample, int worldY, bool openAbove)
     {
-        if (worldY <= sample.WaterLevel + 1 || sample.Weights.Shore > 0.35f)
+        float shoreInfluence = MathF.Max(sample.Weights.Shore, sample.ShoreWeight);
+        float wetlandInfluence = MathF.Max(sample.Weights.Wetland, sample.WetlandWeight * 0.85f);
+        float woodlandInfluence = MathF.Max(sample.Weights.Woodland, sample.WoodlandWeight * 0.82f) * (1f - sample.TreeLine * 0.75f);
+        float screeInfluence = MathF.Max(sample.Weights.Scree, sample.Slope * 0.54f + sample.Transition * 0.10f);
+        float alpineInfluence = MathF.Max(sample.Weights.Alpine, sample.SnowCoverMask * 0.72f + sample.TreeLine * 0.16f);
+
+        if (worldY <= sample.WaterLevel + 1 || shoreInfluence > 0.32f)
         {
             return SurfaceMaterialKind.Shore;
         }
 
-        if (sample.Weights.Wetland > 0.34f || sample.WetlandWeight > 0.42f)
+        if (wetlandInfluence > 0.42f || wetlandInfluence > 0.28f && sample.Moisture > 0.70f && sample.Slope < 0.22f)
         {
             return SurfaceMaterialKind.Wetland;
         }
 
-        if (sample.Weights.Alpine > 0.36f || sample.AlpineWeight > 0.42f)
+        if (alpineInfluence > 0.46f || sample.Elevation > 0.58f && sample.SnowCoverMask > 0.58f)
         {
             return SurfaceMaterialKind.Alpine;
         }
 
-        if (sample.Weights.Scree > 0.34f || sample.ScreeWeight > 0.38f)
+        if (screeInfluence > 0.42f && sample.Moisture < 0.58f)
         {
             return SurfaceMaterialKind.Scree;
         }
 
-        if (sample.Weights.Mountains > 0.38f || sample.Slope > settings.SteepSlopeThreshold)
+        if (sample.Weights.Mountains > 0.38f || sample.Slope > settings.SteepSlopeThreshold - sample.Transition * 0.04f)
         {
             return SurfaceMaterialKind.Cliff;
         }
 
-        if (sample.Weights.Woodland > 0.34f && sample.Moisture > 0.44f)
+        if (woodlandInfluence > 0.34f && sample.Moisture > 0.42f)
         {
             return SurfaceMaterialKind.ForestFloor;
         }
 
-        if (openAbove && sample.Weights.Plains > 0.45f && sample.Moisture > 0.45f)
+        if (openAbove && sample.Weights.Plains > 0.42f && sample.Moisture > 0.44f && sample.TreeLine < 0.52f)
         {
             return SurfaceMaterialKind.HighGrass;
         }

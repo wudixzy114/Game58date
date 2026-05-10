@@ -119,16 +119,29 @@ public sealed class TerrainChunkGenerator
                 return openAbove ? BlockKind.Mud : BlockKind.Peat;
 
             case SurfaceMaterialKind.ForestFloor:
-                return openAbove ? BlockKind.Moss : BlockKind.Dirt;
+                return openAbove
+                    ? sample.Moisture > 0.62f || sample.Transition > 0.44f
+                        ? BlockKind.Moss
+                        : BlockKind.Dirt
+                    : BlockKind.Dirt;
 
             case SurfaceMaterialKind.Cliff:
-                return depthFromSurface <= 2 ? BlockKind.Stone : BlockKind.Dirt;
+                if (openAbove && sample.SnowCoverMask > 0.68f)
+                {
+                    return BlockKind.Snow;
+                }
+
+                return depthFromSurface <= 2 || sample.Elevation > 0.56f
+                    ? BlockKind.Stone
+                    : BlockKind.Dirt;
 
             case SurfaceMaterialKind.Scree:
                 return BlockKind.Scree;
 
             case SurfaceMaterialKind.Alpine:
-                return openAbove ? BlockKind.Snow : BlockKind.Stone;
+                return openAbove && sample.SnowCoverMask > 0.34f
+                    ? BlockKind.Snow
+                    : BlockKind.Stone;
 
             case SurfaceMaterialKind.HighGrass:
                 return openAbove ? BlockKind.Grass : BlockKind.Dirt;
@@ -136,6 +149,11 @@ public sealed class TerrainChunkGenerator
             default:
                 if (openAbove)
                 {
+                    if (sample.TreeLine > 0.62f || sample.SnowCoverMask > 0.60f)
+                    {
+                        return BlockKind.Dirt;
+                    }
+
                     return BlockKind.Grass;
                 }
 
@@ -174,7 +192,9 @@ public sealed class TerrainChunkGenerator
 
         if (sample.Biome == BiomeKind.Alpine)
         {
-            return BlockKind.Stone;
+            return sample.SnowCoverMask > 0.55f && worldYNearSurface(sample, worldY)
+                ? BlockKind.Snow
+                : BlockKind.Stone;
         }
 
         return BlockKind.Dirt;
@@ -185,6 +205,11 @@ public sealed class TerrainChunkGenerator
         return sample.Biome == BiomeKind.Scree
             ? BlockKind.Scree
             : BlockKind.Stone;
+    }
+
+    private static bool worldYNearSurface(WorldSample sample, int worldY)
+    {
+        return sample.SurfaceHeight - worldY <= 2;
     }
 
     private void ApplyOverrides(VoxelChunkData chunk)

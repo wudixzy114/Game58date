@@ -23,4 +23,12 @@ public enum TerrainTextureTile : byte
     SnowDust = 17,
     Scree = 18,
     WetGrassSide = 19,
+    WetMud = 20,
+    RootSoil = 21,
+    WeatheredStone = 22,
+    BlueSnow = 23,
+    TundraSoil = 24,
+    BrokenScree = 25,
+    DarkForestMoss = 26,
+    ColdPeat = 27,
 }

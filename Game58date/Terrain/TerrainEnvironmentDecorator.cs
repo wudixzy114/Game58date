@@ -207,7 +207,7 @@ public sealed class TerrainEnvironmentDecorator
 
     private Entity CreatePropEntity(EnvironmentPlacementRecord placement)
     {
-        return placement.Variant.Kind switch
+        Entity entity = placement.Variant.Kind switch
         {
             EnvironmentPropKind.BroadleafTree => CreateBroadleafTree(placement),
             EnvironmentPropKind.PineTree => CreatePineTree(placement),
@@ -222,6 +222,9 @@ public sealed class TerrainEnvironmentDecorator
             EnvironmentPropKind.Gull => CreateGull(placement),
             _ => CreateRockCluster(placement),
         };
+
+        AttachDistanceCulling(entity, placement.Variant);
+        return entity;
     }
 
     private bool TryGetPlacementContext(VoxelChunkData chunkData, int localX, int localZ, int clearanceHeight, out PlacementContext context)
@@ -417,6 +420,31 @@ public sealed class TerrainEnvironmentDecorator
             RotationAmplitudeEuler = rotationAmplitudeEuler,
             Speed = speed,
             Phase = phase * MathF.PI * 2f,
+        });
+    }
+
+    private static void AttachDistanceCulling(Entity entity, EnvironmentPropVariant variant)
+    {
+        float visibleDistance = variant.Lod switch
+        {
+            EnvironmentLodLevel.Near => 52f,
+            EnvironmentLodLevel.Mid => 74f,
+            _ => 96f,
+        };
+
+        visibleDistance += variant.Kind switch
+        {
+            EnvironmentPropKind.BroadleafTree or EnvironmentPropKind.PineTree or EnvironmentPropKind.WetlandTree => 8f,
+            EnvironmentPropKind.ReedPatch or EnvironmentPropKind.Bush => -4f,
+            EnvironmentPropKind.RuinArch or EnvironmentPropKind.Cairn => 12f,
+            EnvironmentPropKind.Gull => 10f,
+            _ => 0f,
+        };
+
+        entity.Add(new EnvironmentDistanceCullingScript
+        {
+            VisibleDistance = visibleDistance,
+            Hysteresis = 8f,
         });
     }
 

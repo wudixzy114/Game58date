@@ -253,6 +253,7 @@ public sealed class VoxelTerrainWorldRuntime
         Stats.QueuedBuildCount = buildPipeline.QueuedCount;
         Stats.RunningBuildCount = buildPipeline.RunningCount;
         Stats.LastErrorMessage = buildPipeline.LastErrorMessage;
+        UpdateEnvironmentStats();
     }
 
     private void RequestChunkBuild(VoxelChunkCoordinate coordinate)

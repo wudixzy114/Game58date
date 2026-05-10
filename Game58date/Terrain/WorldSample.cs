@@ -17,4 +17,8 @@ public readonly record struct WorldSample(
     float ScreeWeight,
     float AlpineWeight,
     float MountainWeight,
-    float Slope);
+    float Slope,
+    float Elevation,
+    float Transition,
+    float TreeLine,
+    float SnowCoverMask);

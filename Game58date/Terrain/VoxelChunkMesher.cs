@@ -198,7 +198,8 @@ public sealed class VoxelChunkMesher
         Vector3 p3 = BuildPosition(face, plane, du, dv + height, scale);
 
         bool isFaceExposedToSky = IsFaceExposedToSky(chunk, face, plane, du, dv, width, height);
-        TerrainTextureTile tile = faceTextureResolver.Resolve(block, face.Normal, isFaceExposedToSky);
+        ResolveFaceWorldCoordinate(chunk, face, plane, du, dv, out int worldX, out int worldY, out int worldZ);
+        TerrainTextureTile tile = faceTextureResolver.Resolve(block, face.Normal, isFaceExposedToSky, worldX, worldY, worldZ);
 
         int baseVertex = surface.Vertices.Count;
         surface.Vertices.Add(new VertexPositionNormalTexture(p0, face.Normal, GetUv(tile, 0, width, height)));
@@ -231,7 +232,7 @@ public sealed class VoxelChunkMesher
 
     private static Vector2 GetUv(TerrainTextureTile tile, int cornerIndex, int width, int height)
     {
-        const float atlasTileCount = 20f;
+        float atlasTileCount = TerrainTextureAtlasFactory.TileCount;
         float tileSize = 1f / atlasTileCount;
         float minU = (int)tile * tileSize;
         float maxU = minU + tileSize;
@@ -244,6 +245,57 @@ public sealed class VoxelChunkMesher
             2 => new Vector2(maxU, 0f),
             _ => new Vector2(maxU, repeatV),
         };
+    }
+
+    private static void ResolveFaceWorldCoordinate(VoxelChunkData chunk, FaceDefinition face, int plane, int du, int dv, out int worldX, out int worldY, out int worldZ)
+    {
+        int localAxis = face.NormalSign > 0 ? plane - 1 : plane;
+        int localX = 0;
+        int localY = 0;
+        int localZ = 0;
+
+        switch (face.Axis)
+        {
+            case 0:
+                localX = localAxis;
+                break;
+            case 1:
+                localY = localAxis;
+                break;
+            default:
+                localZ = localAxis;
+                break;
+        }
+
+        switch (face.UAxis)
+        {
+            case 0:
+                localX = du;
+                break;
+            case 1:
+                localY = du;
+                break;
+            default:
+                localZ = du;
+                break;
+        }
+
+        switch (face.VAxis)
+        {
+            case 0:
+                localX = dv;
+                break;
+            case 1:
+                localY = dv;
+                break;
+            default:
+                localZ = dv;
+                break;
+        }
+
+        worldX = chunk.Coordinate.X * chunk.Size + localX;
+        worldY = localY;
+        worldZ = chunk.Coordinate.Z * chunk.Size + localZ;
     }
 
     private static bool IsFaceExposedToSky(VoxelChunkData chunk, FaceDefinition face, int plane, int du, int dv, int width, int height)

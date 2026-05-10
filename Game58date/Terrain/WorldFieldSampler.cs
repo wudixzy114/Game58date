@@ -1,5 +1,6 @@
 using System;
 using Game58date.Terrain.Noise;
+using Stride.Core.Mathematics;
 
 namespace Game58date.Terrain;
 
@@ -56,7 +57,17 @@ public sealed class WorldFieldSampler
         int soilDepth = 4 + (int)MathF.Round(moisture * 2f);
         int stoneHeight = Math.Max(1, surfaceHeight - soilDepth);
         float slope = EstimateSlope(worldX, worldZ);
-        BiomeWeights weights = BuildBiomeWeights(shoreWeight, wetlandWeight, woodlandWeight, hillWeight, screeWeight, alpineWeight, mountainWeight);
+        float elevation = Saturate((surfaceHeight - settings.WaterLevel) / MathF.Max(1f, settings.ChunkHeight - settings.WaterLevel - 10f));
+        float treeLine = ComputeTreeLineMask(elevation, temperature);
+        BiomeWeights weights = RefineBiomeWeights(
+            BuildBiomeWeights(shoreWeight, wetlandWeight, woodlandWeight, hillWeight, screeWeight, alpineWeight, mountainWeight),
+            elevation,
+            slope,
+            moisture,
+            temperature,
+            treeLine);
+        float transition = ComputeTransitionStrength(weights);
+        float snowCoverMask = ComputeSnowCoverMask(weights, elevation, slope, moisture, temperature, treeLine);
 
         return new WorldSample(
             surfaceHeight,
@@ -75,7 +86,11 @@ public sealed class WorldFieldSampler
             screeWeight,
             alpineWeight,
             mountainWeight,
-            slope);
+            slope,
+            elevation,
+            transition,
+            treeLine,
+            snowCoverMask);
     }
 
     public float SampleCaveDensity(int worldX, int worldY, int worldZ)
@@ -198,6 +213,28 @@ public sealed class WorldFieldSampler
             mountains / total);
     }
 
+    private static BiomeWeights RefineBiomeWeights(
+        BiomeWeights weights,
+        float elevation,
+        float slope,
+        float moisture,
+        float temperature,
+        float treeLine)
+    {
+        float shore = weights.Shore;
+        float wetlands = weights.Wetland * (1f - treeLine * 0.70f);
+        float woodlands = weights.Woodland * (1f - MathF.Max(treeLine * 0.84f, slope * 0.32f));
+        float alpineBoost = SmoothStep(0.46f, 0.78f, elevation) * SmoothStep(0.62f, 0.24f, temperature);
+        float alpine = MathF.Max(weights.Alpine, alpineBoost * (0.38f + treeLine * 0.52f));
+        float screeBoost = SmoothStep(0.18f, 0.50f, slope) * (1f - moisture) * (0.28f + elevation * 0.34f);
+        float scree = MathF.Max(weights.Scree, screeBoost);
+        float hills = weights.Hills * (1f - alpine * 0.24f) + scree * 0.08f;
+        float mountains = MathF.Max(weights.Mountains, SmoothStep(0.52f, 0.86f, elevation) * (0.20f + weights.Mountains * 0.80f));
+        float plains = weights.Plains * (1f - treeLine * 0.50f) * (1f - slope * 0.12f);
+
+        return NormalizeWeights(shore, plains, wetlands, woodlands, hills, scree, alpine, mountains);
+    }
+
     private static BiomeKind ResolveBiome(BiomeWeights weights, float ridge)
     {
         if (weights.Shore >= weights.Plains &&
@@ -258,6 +295,99 @@ public sealed class WorldFieldSampler
         return BiomeKind.Plains;
     }
 
+    private static float ComputeTreeLineMask(float elevation, float temperature)
+    {
+        return SmoothStep(0.44f, 0.70f, elevation) * SmoothStep(0.64f, 0.28f, temperature);
+    }
+
+    private static float ComputeTransitionStrength(BiomeWeights weights)
+    {
+        Span<float> values =
+        [
+            weights.Shore,
+            weights.Plains,
+            weights.Wetland,
+            weights.Woodland,
+            weights.Hills,
+            weights.Scree,
+            weights.Alpine,
+            weights.Mountains,
+        ];
+
+        float strongest = 0f;
+        float secondStrongest = 0f;
+        for (int i = 0; i < values.Length; i++)
+        {
+            float value = values[i];
+            if (value >= strongest)
+            {
+                secondStrongest = strongest;
+                strongest = value;
+            }
+            else if (value > secondStrongest)
+            {
+                secondStrongest = value;
+            }
+        }
+
+        if (strongest <= 0f)
+        {
+            return 0f;
+        }
+
+        return Saturate(secondStrongest / strongest);
+    }
+
+    private static float ComputeSnowCoverMask(
+        BiomeWeights weights,
+        float elevation,
+        float slope,
+        float moisture,
+        float temperature,
+        float treeLine)
+    {
+        float coldness = Saturate((0.52f - temperature) * 1.8f);
+        float alpineSupport = MathF.Max(weights.Alpine, weights.Mountains * 0.72f);
+        float exposure = MathF.Max(slope * 0.32f, treeLine * 0.26f);
+        return Saturate(coldness * 0.56f + alpineSupport * 0.34f + elevation * 0.14f + moisture * 0.08f + exposure);
+    }
+
+    private static BiomeWeights NormalizeWeights(
+        float shore,
+        float plains,
+        float wetlands,
+        float woodlands,
+        float hills,
+        float scree,
+        float alpine,
+        float mountains)
+    {
+        shore = Saturate(shore);
+        plains = Saturate(plains);
+        wetlands = Saturate(wetlands);
+        woodlands = Saturate(woodlands);
+        hills = Saturate(hills);
+        scree = Saturate(scree);
+        alpine = Saturate(alpine);
+        mountains = Saturate(mountains);
+
+        float total = shore + plains + wetlands + woodlands + hills + scree + alpine + mountains;
+        if (total <= 0f)
+        {
+            return new BiomeWeights(0f, 1f, 0f, 0f, 0f, 0f, 0f, 0f);
+        }
+
+        return new BiomeWeights(
+            shore / total,
+            plains / total,
+            wetlands / total,
+            woodlands / total,
+            hills / total,
+            scree / total,
+            alpine / total,
+            mountains / total);
+    }
+
     private static float SamplePseudo3D(DeterministicNoise noise, int x, int y, int z, float frequency)
     {
         float xy = noise.Sample2D(x * frequency + y * 0.173f, z * frequency + y * 0.137f);
@@ -275,6 +405,17 @@ public sealed class WorldFieldSampler
     {
         float stepped = MathF.Floor(value / stepHeight) * stepHeight;
         return stepped + (value - stepped) * blend;
+    }
+
+    private static float SmoothStep(float edge0, float edge1, float value)
+    {
+        if (MathUtil.NearEqual(edge0, edge1))
+        {
+            return value >= edge1 ? 1f : 0f;
+        }
+
+        float t = Saturate((value - edge0) / (edge1 - edge0));
+        return t * t * (3f - 2f * t);
     }
 
     private static float Saturate(float value)

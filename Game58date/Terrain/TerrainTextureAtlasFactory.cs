@@ -8,7 +8,7 @@ namespace Game58date.Terrain;
 public sealed class TerrainTextureAtlasFactory
 {
     private const int TileSize = 64;
-    private const int TileCount = 20;
+    public const int TileCount = 28;
 
     private readonly GraphicsDevice graphicsDevice;
     private readonly GraphicsContext graphicsContext;
@@ -52,6 +52,14 @@ public sealed class TerrainTextureAtlasFactory
         FillSnowTile(pixels, width, (int)TerrainTextureTile.SnowDust);
         FillPebbleTile(pixels, width, (int)TerrainTextureTile.Scree, new Color(118, 118, 114), new Color(170, 168, 160));
         FillWetGrassSideTile(pixels, width, (int)TerrainTextureTile.WetGrassSide);
+        FillSoilTile(pixels, width, (int)TerrainTextureTile.WetMud, new Color(56, 60, 62), new Color(90, 95, 97), 0.06f);
+        FillRootSoilTile(pixels, width, (int)TerrainTextureTile.RootSoil);
+        FillRockTile(pixels, width, (int)TerrainTextureTile.WeatheredStone, new Color(102, 108, 116), new Color(156, 163, 170), 0.72f);
+        FillBlueSnowTile(pixels, width, (int)TerrainTextureTile.BlueSnow);
+        FillSoilTile(pixels, width, (int)TerrainTextureTile.TundraSoil, new Color(98, 94, 88), new Color(142, 136, 128), 0.07f);
+        FillPebbleTile(pixels, width, (int)TerrainTextureTile.BrokenScree, new Color(112, 110, 104), new Color(176, 170, 160));
+        FillGrassTopVariantTile(pixels, width, (int)TerrainTextureTile.DarkForestMoss, new Color(34, 56, 32), new Color(72, 104, 56), floralTint: new Color(112, 102, 72));
+        FillSoilTile(pixels, width, (int)TerrainTextureTile.ColdPeat, new Color(42, 46, 50), new Color(72, 77, 80), 0.04f);
 
         Color[][] mipChain = BuildMipChain(width, height, pixels);
         Texture texture = Texture.New2D(
@@ -267,6 +275,19 @@ public sealed class TerrainTextureAtlasFactory
         OverlaySnowCrust(pixels, atlasWidth, tileIndex);
     }
 
+    private static void FillBlueSnowTile(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, new Color(170, 182, 194), new Color(228, 236, 244), false);
+        OverlaySnowCrust(pixels, atlasWidth, tileIndex);
+    }
+
+    private static void FillRootSoilTile(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        FillTile(pixels, atlasWidth, tileIndex, new Color(76, 57, 38), new Color(118, 87, 58), false);
+        OverlaySoilGrain(pixels, atlasWidth, tileIndex, 0.18f);
+        OverlayRootFibers(pixels, atlasWidth, tileIndex);
+    }
+
     private static void OverlayCracks(Color[] pixels, int atlasWidth, int tileIndex, Color crackColor, int spacing, float intensity)
     {
         int xOffset = tileIndex * TileSize;
@@ -390,6 +411,26 @@ public sealed class TerrainTextureAtlasFactory
 
                 int index = y * atlasWidth + xOffset + x;
                 pixels[index] = Lerp(pixels[index], new Color(255, 255, 255), (crustNoise - 0.76f) * 0.45f);
+            }
+        }
+    }
+
+    private static void OverlayRootFibers(Color[] pixels, int atlasWidth, int tileIndex)
+    {
+        int xOffset = tileIndex * TileSize;
+        for (int y = 0; y < TileSize; y++)
+        {
+            for (int x = 0; x < TileSize; x++)
+            {
+                float fiber = MathF.Sin((x * 0.42f) + (y * 0.16f)) * 0.5f + 0.5f;
+                float breakNoise = Noise(x * 2, y * 3, tileIndex * 251 + 61);
+                if (fiber < 0.84f || breakNoise < 0.74f)
+                {
+                    continue;
+                }
+
+                int index = y * atlasWidth + xOffset + x;
+                pixels[index] = Lerp(pixels[index], new Color(132, 96, 64), (fiber - 0.84f) * 0.55f);
             }
         }
     }
